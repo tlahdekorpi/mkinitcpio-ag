@@ -30,7 +30,7 @@ add_keymap_file() {
         done < <($cat "$f")
         add_dir "${of%/*}"
         $cat "$f" > "$BUILDROOT/$of"
-    done < <(find /usr/share/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
+    done < <(find /usr/{lib,share}/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
 }
 
 build() {
@@ -50,7 +50,7 @@ build() {
         [[ $KEYMAP_TOGGLE ]] && add_keymap_file $KEYMAP_TOGGLE.map
 
         if [[ $FONT ]]; then
-            for file in "/usr/share/kbd/consolefonts/$FONT".@(fnt|psf?(u))?(.gz); do
+            for file in /usr/{share,lib}/kbd/consolefonts/"$FONT".@(fnt|psf?(u))?(.gz); do
                 get_decompressor "$file"
                 add_dir "${of%/*}"
                 $cat "$file" > "$BUILDROOT/$of"
