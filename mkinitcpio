@@ -209,6 +209,9 @@ build_image() {
         lz4)
             COMPRESSION_OPTIONS+=('-l')
             ;;
+        gzip|pigz)
+            COMPRESSION_OPTIONS+=('-n')
+            ;;
     esac
 
     archivegen -fmt cpio "$BUILDARCHIVE" | $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
