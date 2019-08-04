@@ -157,7 +157,7 @@ kver() {
 
 plain() {
     local mesg=$1; shift
-    printf "    $_color_bold$mesg$_color_none\n" "$@" >&1
+    printf "    $_color_bold$mesg$_color_none\n" "$@" >&2
 }
 
 quiet() {
@@ -166,12 +166,12 @@ quiet() {
 
 msg() {
     local mesg=$1; shift
-    printf "$_color_green==>$_color_none $_color_bold$mesg$_color_none\n" "$@" >&1
+    printf "$_color_green==>$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
 }
 
 msg2() {
     local mesg=$1; shift
-    printf "  $_color_blue->$_color_none $_color_bold$mesg$_color_none\n" "$@" >&1
+    printf "  $_color_blue->$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
 }
 
 warning() {
