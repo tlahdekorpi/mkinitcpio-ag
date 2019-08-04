@@ -30,11 +30,27 @@ build() {
     done
 
     # detect filesystem for root
-    if rootfstype=$(findmnt -uno fstype -T '/'); then
-        add_if_avail "$rootfstype"
-    else
+    fs_autodetect_failed=1
+
+    for p in '/' '/usr'; do
+        if ! rootfstype=$(findmnt -uno fstype -T $p); then
+            continue
+        fi
+
+        case "$rootfstype" in
+            tmpfs)
+                continue
+                ;;
+            *)
+                add_if_avail "$rootfstype"
+                fs_autodetect_failed=0
+                break
+                ;;
+        esac
+    done
+
+    if (( fs_autodetect_failed )); then
         error "failed to detect root filesystem"
-        fs_autodetect_failed=1
     fi
 
     # detect filesystem for separate /usr
