@@ -1,26 +1,21 @@
 #!/bin/bash
 
 build() {
-    local applet
+    local init=
+    init=$(PATH=$PWD:/usr/lib/initcpio type -P init) || return 1
 
-    add_binary /usr/lib/initcpio/busybox /bin/busybox
+    busybox --list | awk '{print "l busybox usr/bin/"$1}' | add
 
-    for applet in $(/usr/lib/initcpio/busybox --list); do
-        add_symlink "/usr/bin/$applet" busybox
-    done
+    add <<!
+f $init{,_functions} / 0755
 
-    # add kmod with applet symlinks
-    add_binary kmod
-    for applet in {dep,ins,rm,ls}mod mod{probe,info}; do
-        add_symlink "/usr/bin/$applet" kmod
-    done
+L /usr/sbin/{busybox,blkid,switch_root} usr/bin
+L /usr/bin/{u,}mount
 
-    add_binary blkid
-    add_binary mount
-    add_binary switch_root
-
-    add_file "/usr/lib/initcpio/init_functions" "/init_functions"
-    add_file "/usr/lib/initcpio/init" "/init"
+L /usr/bin/kmod
+l kmod usr/bin/{dep,ins,rm,ls}mod
+l kmod usr/bin/mod{probe,info}
+!
 }
 
 help() {

@@ -193,7 +193,7 @@ compute_hookset() {
 
 build_image() {
     local out=$1 compress=$2 errmsg=
-    local -a pipesave cpio_opts
+    local -a pipesave
 
     case $compress in
         cat)
@@ -211,24 +211,11 @@ build_image() {
             ;;
     esac
 
-    cpio_opts=('-0' '-o' '-H' 'newc')
-    (( _optquiet )) && cpio_opts+=('--quiet')
-    if (( EUID != 0 )); then
-        warning 'Not building as root, ownership cannot be preserved'
-        cpio_opts+=('-R' '0:0')
-    fi
-
-    pushd "$BUILDROOT" >/dev/null
-    find . -mindepth 1 -printf '%P\0' |
-            LANG=C bsdcpio "${cpio_opts[@]}" |
-            $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
+    archivegen -fmt cpio "$BUILDARCHIVE" | $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
     pipesave=("${PIPESTATUS[@]}") # save immediately
-    popd >/dev/null
 
     if (( pipesave[0] )); then
-        errmsg="find reported an error"
-    elif (( pipesave[1] )); then
-        errmsg="bsdcpio reported an error"
+        errmsg="archivegen reported an error"
     elif (( pipesave[2] )); then
         errmsg="$compress reported an error"
     fi
@@ -431,12 +418,13 @@ fi
 
 if [[ $KERNELVERSION != 'none' ]]; then
     KERNELVERSION=$(resolve_kernver "$KERNELVERSION") || cleanup 1
-    _d_kmoduledir=$_optmoduleroot/lib/modules/$KERNELVERSION
+    _d_kmoduledir=$_optmoduleroot/usr/lib/modules/$KERNELVERSION
     [[ -d $_d_kmoduledir ]] || die "'$_d_kmoduledir' is not a valid kernel module directory"
 fi
 
 _d_workdir=$(initialize_buildroot "$KERNELVERSION" "$_opttargetdir") || cleanup 1
 BUILDROOT=${_opttargetdir:-$_d_workdir/root}
+BUILDARCHIVE=${_opttargetdir:-$_d_workdir/archive}
 
 . "$_f_config" || die "Failed to read configuration \`%s'" "$_f_config"
 
@@ -509,9 +497,6 @@ install_modules "${!_modpaths[@]}"
 set +o functrace
 set +o errtrace
 trap -- ERR
-
-# this is simply a nice-to-have -- it doesn't matter if it fails.
-ldconfig -r "$BUILDROOT" &>/dev/null
 
 if [[ $_optgenimg ]]; then
     build_image "$_optgenimg" "$_optcompress"

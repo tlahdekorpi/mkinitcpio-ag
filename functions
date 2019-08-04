@@ -290,6 +290,10 @@ all_modules() {
     done
     shift $(( OPTIND - 1 ))
 
+    [[ ! -f "$_d_workdir/all.modules" ]] && \
+        find "$_d_kmoduledir" -type f -name '*.ko*' -print0 2>/dev/null \
+            > "$_d_workdir/all.modules"
+
     while read -r -d '' mod; do
         (( ++count ))
 
@@ -300,7 +304,7 @@ all_modules() {
         mod=${mod##*/}
         mod="${mod%.ko*}"
         printf '%s\n' "${mod//-/_}"
-    done < <(find "$_d_kmoduledir" -name '*.ko*' -print0 2>/dev/null | grep -EZz "$@")
+    done < <(grep -EZz "$@" "$_d_workdir/all.modules")
 
     (( count ))
 }
@@ -331,8 +335,6 @@ add_checked_modules() {
     fi
 
     map add_module "${mods[@]}"
-
-    return $(( !${#mods[*]} ))
 }
 
 add_firmware() {
@@ -431,111 +433,28 @@ add_module() {
     esac
 }
 
-add_full_dir() {
-    # Add a directory and all its contents, recursively, to the initcpio image.
-    # No parsing is performed and the contents of the directory is added as is.
-    #   $1: path to directory
-    #   $2: glob pattern to filter file additions (optional)
-    #   $3: path prefix that will be stripped off from the image path (optional)
-
-    local f= filter=${2:-*} strip_prefix=$3
-
-    if [[ -n $1 && -d $1 ]]; then
-        add_dir "$1"
-
-        for f in "$1"/*; do
-            if [[ -L $f ]]; then
-                if [[ $f = $filter ]]; then
-                    add_symlink "${f#$strip_prefix}" "$(readlink "$f")"
-                fi
-            elif [[ -d $f ]]; then
-                add_full_dir "$f" "$filter" "$strip_prefix"
-            elif [[ -f $f ]]; then
-                if [[ $f = $filter ]]; then
-                    add_file "$f" "${f#$strip_prefix}"
-                fi
-            fi
-        done
+add() {
+    if (( $# )); then
+        printf '%s\n' "$@" >> "$BUILDARCHIVE"
+    else
+        cat - >> "$BUILDARCHIVE"
     fi
+}
+
+add_full_dir() {
+    add "R $1 $1 0 0"
 }
 
 add_dir() {
-    # add a directory (with parents) to $BUILDROOT
-    #   $1: pathname on initcpio
-    #   $2: mode (optional)
-
-    if [[ -z $1 || $1 != /?* ]]; then
-        return 1
-    fi
-
-    local path=$1 mode=${2:-755}
-
-    if [[ -d $BUILDROOT$1 ]]; then
-        # ignore dir already exists
-        return 0
-    fi
-
-    quiet "adding dir: %s" "$path"
-    command install -dm$mode "$BUILDROOT$path"
+    add "d $1 $2"
 }
 
 add_symlink() {
-    # Add a symlink to the initcpio image. There is no checking done
-    # to ensure that the target of the symlink exists.
-    #   $1: pathname of symlink on image
-    #   $2: absolute path to target of symlink (optional, can be read from $1)
-
-    local name=$1 target=$2
-
-    (( $# == 1 || $# == 2 )) || return 1
-
-    if [[ -z $target ]]; then
-        target=$(readlink -f "$name")
-        if [[ -z $target ]]; then
-            error 'invalid symlink: %s' "$name"
-            return 1
-        fi
-    fi
-
-    add_dir "${name%/*}"
-
-    if [[ -L $BUILDROOT$1 ]]; then
-        quiet "overwriting symlink %s -> %s" "$name" "$target"
-    else
-        quiet "adding symlink: %s -> %s" "$name" "$target"
-    fi
-    ln -sfn "$target" "$BUILDROOT$name"
+    add "l $2 $1"
 }
 
 add_file() {
-    # Add a plain file to the initcpio image. No parsing is performed and only
-    # the singular file is added.
-    #   $1: path to file
-    #   $2: destination on initcpio (optional, defaults to same as source)
-    #   $3: mode
-
-    (( $# )) || return 1
-
-    # determine source and destination
-    local src=$1 dest=${2:-$1} mode=
-
-    if [[ ! -f $src ]]; then
-        error "file not found: \`%s'" "$src"
-        return 1
-    fi
-
-    mode=${3:-$(stat -c %a "$src")}
-    if [[ -z $mode ]]; then
-        error "failed to stat file: \`%s'." "$src"
-        return 1
-    fi
-
-    if [[ -e $BUILDROOT$dest ]]; then
-        quiet "overwriting file: %s" "$dest"
-    else
-        quiet "adding file: %s" "$dest"
-    fi
-    command install -Dm$mode "$src" "$BUILDROOT$dest"
+    add "f $1 $2 $3"
 }
 
 add_runscript() {
@@ -577,8 +496,7 @@ add_binary() {
     #   $1: path to binary
     #   $2: destination on initcpio (optional, defaults to same as source)
 
-    local -a sodeps
-    local line= regex= binary= dest= mode= sodep= resolved=
+    local binary=
 
     if [[ ${1:0:1} != '/' ]]; then
         binary=$(type -P "$1")
@@ -586,37 +504,19 @@ add_binary() {
         binary=$1
     fi
 
-    if [[ ! -f $binary ]]; then
-        error "file not found: \`%s'" "$1"
+    if [[ ! -n $binary ]]; then
+        error "empty binary: $script"
         return 1
     fi
 
     dest=${2:-$binary}
-    mode=$(stat -c %a "$binary")
+    dest=${dest/\/sbin\//\/bin\/}
 
-    # always add the binary itself
-    add_file "$binary" "$dest" "$mode"
-
-    # negate this so that the RETURN trap is not fired on non-binaries
-    ! lddout=$(ldd "$binary" 2>/dev/null) && return 0
-
-    # resolve sodeps
-    regex='^(|.+ )(/.+) \(0x[a-fA-F0-9]+\)'
-    while read -r line; do
-        if [[ $line =~ $regex ]]; then
-            sodep=${BASH_REMATCH[2]}
-        elif [[ $line = *'not found' ]]; then
-            error "binary dependency \`%s' not found for \`%s'" "${line%% *}" "$1"
-            (( ++_builderrors ))
-            continue
-        fi
-
-        if [[ -f $sodep && ! -e $BUILDROOT$sodep ]]; then
-            add_file "$sodep" "$sodep" "$(stat -Lc %a "$sodep")"
-        fi
-    done <<< "$lddout"
-
-    return 0
+    if [[ "$(head -c1 $binary)" != "#" ]]; then
+        add "L $binary $dest"
+    else
+        add "f $binary $dest 0755"
+    fi
 }
 
 parse_config() {
@@ -657,52 +557,38 @@ initialize_buildroot() {
     # creates a temporary directory for the buildroot and initialize it with a
     # basic set of necessary directories and symlinks
 
-    local workdir= kernver=$1 arch=$(uname -m) buildroot
+    local workdir= kernver=$1 arch=$(uname -m) buildroot buildarchive
 
     if ! workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX); then
         error 'Failed to create temporary working directory in %s' "${TMPDIR:-/tmp}"
         return 1
     fi
     buildroot=${2:-$workdir/root}
+    buildarchive=${2:-$workdir/archive}
+
+    install -dm755 "$buildroot"
 
     if [[ ! -w ${2:-$workdir} ]]; then
         error 'Unable to write to build root: %s' "$buildroot"
         return 1
     fi
 
-    # base directory structure
-    install -dm755 "$buildroot"/{new_root,proc,sys,dev,run,tmp,var,etc,usr/{local,lib,bin}}
-    ln -s "usr/lib" "$buildroot/lib"
-    ln -s "../lib"  "$buildroot/usr/local/lib"
-    ln -s "bin"     "$buildroot/usr/sbin"
-    ln -s "usr/bin" "$buildroot/bin"
-    ln -s "usr/bin" "$buildroot/sbin"
-    ln -s "../bin"  "$buildroot/usr/local/bin"
-    ln -s "../bin"  "$buildroot/usr/local/sbin"
-    ln -s "/run"    "$buildroot/var/run"
+    cat <<! >> "$buildarchive"
+d {sys,dev,proc,tmp,run,new_root}
+l usr/{sbin,bin,lib} /
+l bin usr/sbin
 
-    case $arch in
-        x86_64)
-            ln -s "lib"     "$buildroot/usr/lib64"
-            ln -s "usr/lib" "$buildroot/lib64"
-            ;;
-    esac
+c etc/{fstab,initrd-release}
+c VERSION - - - $version
 
-    # mkinitcpio version stamp
-    printf '%s' "$version" >"$buildroot/VERSION"
+# fsck
+l ../proc/self/mounts etc/mtab
 
-    # kernel module dir
-    [[ $kernver != none ]] && install -dm755 "$buildroot/usr/lib/modules/$kernver/kernel"
+# systemd var-run-bad
+l ../run var/run
 
-    # mount tables
-    ln -s /proc/self/mounts "$buildroot/etc/mtab"
-    >"$buildroot/etc/fstab"
-
-    # indicate that this is an initramfs
-    >"$buildroot/etc/initrd-release"
-
-    # add a blank ld.so.conf to keep ldconfig happy
-    >"$buildroot/etc/ld.so.conf"
+R $buildroot - 0 0
+!
 
     printf '%s' "$workdir"
 }
@@ -742,12 +628,10 @@ run_build_hook() {
     else
         msg2 "Running build hook: [%s]" "$script"
     fi
-    build
 
-    # if we made it this far, return successfully. Hooks can
-    # do their own error catching if it's severe enough, and
-    # we already capture errors from the add_* functions.
-    return 0
+    if ! build; then
+        error "$script"
+    fi
 }
 
 try_enable_color() {
@@ -769,8 +653,7 @@ try_enable_color() {
 }
 
 install_modules() {
-    local m moduledest=$BUILDROOT/lib/modules/$KERNELVERSION
-    local -a xz_comp gz_comp
+    local moduledest=$BUILDROOT/usr/lib/modules/$KERNELVERSION
 
     [[ $KERNELVERSION == none ]] && return 0
 
@@ -779,36 +662,9 @@ install_modules() {
         return 0
     fi
 
-    cp "$@" "$moduledest/kernel"
+    add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} - 0 0"
 
-    # unzip modules prior to recompression
-    for m in "$@"; do
-        case $m in
-            *.xz)
-                xz_comp+=("$moduledest/kernel/${m##*/}")
-                ;;
-            *.gz)
-                gz_comp+=("$moduledest/kernel/${m##*/}")
-                ;;
-        esac
-    done
-    (( ${#xz_comp[*]} )) && xz -d "${xz_comp[@]}"
-    (( ${#gz_comp[*]} )) && gzip -d "${gz_comp[@]}"
-
-    msg "Generating module dependencies"
-    install -m644 -t "$moduledest" "$_d_kmoduledir"/modules.builtin
-
-    # we install all modules into kernel/, making the .order file incorrect for
-    # the module tree. munge it, so that we have an accurate index. This avoids
-    # some rare and subtle issues with module loading choices when an alias
-    # resolves to multiple modules, only one of which can claim a device.
-    awk -F'/' '{ print "kernel/" $NF }' \
-        "$_d_kmoduledir"/modules.order >"$moduledest/modules.order"
-
-    depmod -b "$BUILDROOT" "$KERNELVERSION"
-
-    # remove all non-binary module.* files (except devname for on-demand module loading)
-    rm "$moduledest"/modules.!(*.bin|devname|softdep)
+    printf 'f /usr%s\n' "$@" | add
 }
 
 # vim: set ft=sh ts=4 sw=4 et:
