@@ -1,0 +1,62 @@
+#!/bin/bash
+get_decompressor() {
+	case "$1" in
+	*.gz)
+		cat=zcat
+		of=${1%.gz}
+		;;
+	*.bz2)
+		cat=bzcat
+		of=${1%.bz2}
+		;;
+	*)
+		cat=cat
+		of=$1
+		;;
+	esac
+}
+
+add_keymap_file() {
+	local cat cmd rest f of
+
+	while read f; do
+		get_decompressor "$f"
+		while read -r cmd rest; do
+			if [[ $cmd == include ]]; then
+				eval set $rest
+				add_keymap_file "$1"
+			fi
+		done < <($cat "$f")
+		add "f $f"
+	done < <(find /usr/@(share|lib)/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
+}
+
+build() {
+	add <<-!
+	f /usr/lib/udev/rules.d/90-vconsole.rules
+
+	L /usr/bin/{loadkeys,setfont}
+	L /usr/lib/systemd/systemd-vconsole-setup
+	f /etc/vconsole.conf
+	!
+
+	# subshell to avoid namespace pollution
+	(
+	shopt -s nullglob
+	[[ -s /etc/vconsole.conf ]] && source /etc/vconsole.conf
+
+	[[ $KEYMAP ]] && add_keymap_file $KEYMAP.map
+	[[ $KEYMAP_TOGGLE ]] && add_keymap_file $KEYMAP_TOGGLE.map
+
+	[[ ! $FONT ]] && return
+	for file in /usr/@(share|lib)/kbd/consolefonts/"$FONT".@(fnt|psf?(u))?(.gz); do
+		add "f $file"
+	done
+	)
+}
+
+help() { cat <<!
+This hook adds the keymap(s) and font specified in vconsole.conf to the image and
+loads them during early userspace.
+!
+}
