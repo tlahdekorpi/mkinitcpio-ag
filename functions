@@ -450,7 +450,7 @@ add_dir() {
 }
 
 add_symlink() {
-    add "l $2 $1"
+    add "l ${2:-$(readlink -f $1)} $1"
 }
 
 add_file() {
