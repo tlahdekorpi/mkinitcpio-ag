@@ -215,7 +215,8 @@ build_image() {
             ;;
     esac
 
-    archivegen -fmt cpio "$BUILDARCHIVE" | $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
+    archivegen -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" | \
+        $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
     pipesave=("${PIPESTATUS[@]}") # save immediately
 
     if (( pipesave[0] )); then
@@ -507,7 +508,7 @@ trap -- ERR
 
 
 if (( $_optarchive )); then
-    archivegen -print "$BUILDARCHIVE"
+    archivegen -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE"
 fi
 
 if [[ $_optgenimg ]]; then
