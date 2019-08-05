@@ -1,14 +1,9 @@
 #!/bin/bash
-
 build() {
-  add_file /etc/machine-id
-  add_file /etc/hostname
+	add 'f /etc/{hostname,machine-id}'
 }
 
-help() {
-  cat <<HELPEOF
+help() { cat <<!
 This hook installs host-specific configuration files into the initramfs.
-HELPEOF
+!
 }
-
-# vim: set ft=sh ts=4 sw=4 et:

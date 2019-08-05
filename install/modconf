@@ -1,14 +1,10 @@
 #!/bin/bash
-
 build() {
-    add 'g /{etc,usr/lib}/modprobe.d/*.conf - 0 0'
+	add 'g /{etc,usr/lib}/modprobe.d/*.conf - 0 0'
 }
 
-help() {
-    cat <<HELPEOF
+help() { cat <<!
 This hook installs modprobe configuration files from /etc/modprobe.d and
 /usr/lib/modprobe.d.
-HELPEOF
+!
 }
-
-# vim: set ft=sh ts=4 sw=4 et:
