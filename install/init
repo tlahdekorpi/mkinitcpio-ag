@@ -1,0 +1,36 @@
+#!/bin/bash
+
+build() {
+    local init=
+    init=$(PATH=$PWD:/usr/lib/initcpio type -P init) || return 1
+
+    busybox --list | awk '{print "l busybox usr/bin/"$1}' | add
+
+    add <<!
+d {sys,dev,proc,tmp,run,new_root}
+l usr/{sbin,bin,lib} /
+l bin usr/sbin
+
+c etc/fstab
+
+# fsck
+l ../proc/self/mounts etc/mtab
+
+f $init{,_functions} / 0755
+
+L /usr/sbin/{busybox,blkid,switch_root} usr/bin
+L /usr/bin/{u,}mount
+
+L /usr/bin/kmod
+l kmod usr/bin/{dep,ins,rm,ls}mod
+l kmod usr/bin/mod{probe,info}
+!
+}
+
+help() {
+    cat <<HELPEOF
+This will install the included init and a busybox enviroment.
+HELPEOF
+}
+
+# vim: set ft=sh ts=4 sw=4 et:
