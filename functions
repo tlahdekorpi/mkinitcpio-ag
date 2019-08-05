@@ -433,6 +433,14 @@ add_module() {
     esac
 }
 
+addf() {
+    if (( $# )); then
+        printf "$@" >> "$BUILDARCHIVE"
+    else
+        cat - >> "$BUILDARCHIVE"
+    fi
+}
+
 add() {
     if (( $# )); then
         printf '%s\n' "$@" >> "$BUILDARCHIVE"
@@ -648,9 +656,8 @@ install_modules() {
         return 0
     fi
 
-    add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} - 0 0"
-
-    printf 'f /usr%s\n' "$@" | add
+    add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} usr 0 0"
+    addf 'f /usr%s\n' "$@"
 }
 
 # vim: set ft=sh ts=4 sw=4 et:
