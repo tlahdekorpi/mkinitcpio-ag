@@ -2,6 +2,8 @@
 build() {
 	local fsck= added=0
 
+	add 'c etc/fstab' 'l ../proc/self/mounts etc/mtab'
+
 	add_fsck() {
 		if [[ $1 = ext[234] ]]; then
 			add_binary fsck.ext4

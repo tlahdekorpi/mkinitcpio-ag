@@ -98,7 +98,7 @@ add_systemd_drop_in() {
 }
 
 build() {
-	busybox --list | awk '{print "l busybox usr/bin/"$1}' | add
+	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 
 	add <<-!
 	l usr/{sbin,bin,lib} /

@@ -2,15 +2,12 @@
 build() {
 	local init=$(PATH=$PWD:/usr/lib/initcpio type -P init) || return 1
 
-	busybox --list | awk '{print "l busybox usr/bin/"$1}' | add
+	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 
 	add <<-!
 	d {sys,dev,proc,tmp,run,new_root}
 	l usr/{sbin,bin,lib} /
 	l bin usr/sbin
-
-	# fsck
-	l ../proc/self/mounts etc/mtab
 
 	f $init{,_functions} / 0755
 
