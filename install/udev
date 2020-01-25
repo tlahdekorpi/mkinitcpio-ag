@@ -5,7 +5,7 @@ build() {
 	L /usr/bin/{udevadm,systemd-tmpfiles}
 	L /usr/lib/udev/{ata,scsi}_id
 
-	f /usr/lib/udev/rules.d/{
+	fr /usr/lib/udev/rules.d/{
 		50-udev-default.rules
 		60-persistent-storage.rules
 		64-btrfs.rules

@@ -18,6 +18,7 @@ _d_firmware=({/usr,}/lib/firmware/updates {/usr,}/lib/firmware)
 _d_presets=mkinitcpio.d
 
 # options and runtime data
+_optrootfs=
 _optmoduleroot= _optgenimg=
 _optcompress= _opttargetdir=
 _optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0
@@ -27,6 +28,7 @@ declare -A _runhooks _addedmodules _modpaths _autodetect_cache
 
 # export a sane PATH
 export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+export RPATH="$PATH"
 
 # Sanitize environment further
 # GREP_OPTIONS="--color=always" will break everything
@@ -41,6 +43,7 @@ usage: ${0##*/} [options]
 
   Options:
    -a, --archive                Print the generated image in archivegen format
+   -R, --rootfs <dir>           Use alternate system root
    -A, --addhooks <hooks>       Add specified hooks, comma separated, to image
    -c, --config <config>        Use alternate config file. (default: /etc/mkinitcpio.conf)
    -g, --generate <path>        Generate cpio image and write to specified path
@@ -215,13 +218,13 @@ build_image() {
             ;;
     esac
 
-    archivegen -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" | \
+    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" | \
         $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
     pipesave=("${PIPESTATUS[@]}") # save immediately
 
     if (( pipesave[0] )); then
         errmsg="archivegen reported an error"
-    elif (( pipesave[2] )); then
+    elif (( pipesave[1] )); then
         errmsg="$compress reported an error"
     fi
 
@@ -305,8 +308,8 @@ process_preset() (
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short='aA:c:g:H:hk:nLMPp:r:S:sd:t:Vvz:'
-_opt_long=('archive:' 'add:' 'addhooks:' 'config:' 'generate:' 'hookhelp:' 'help'
+_opt_short='aA:R:c:g:H:hk:nLMPp:r:S:sd:t:Vvz:'
+_opt_long=('archive' 'add:' 'rootfs:' 'addhooks:' 'config:' 'generate:' 'hookhelp:' 'help'
           'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor' 'allpresets'
           'preset:' 'skiphooks:' 'save' 'generatedir:' 'builddir:' 'version' 'verbose' 'compress:')
 
@@ -316,8 +319,13 @@ unset _opt_short _opt_long OPTRET
 
 while :; do
     case $1 in
-        -a|-archive)
+        -a|--archive)
             _optarchive=1
+            ;;
+        -R|--rootfs)
+            shift
+            _optrootfs="$1"
+            RPATH=$(sed "s#:#&$_optrootfs#g" <<< "$_optrootfs$PATH")
             ;;
         # --add remains for backwards compat
         -A|--add|--addhooks)
@@ -508,7 +516,7 @@ trap -- ERR
 
 
 if (( $_optarchive )); then
-    archivegen -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE"
+    archivegen -rootfs "$_optrootfs" -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE"
 fi
 
 if [[ $_optgenimg ]]; then

@@ -27,30 +27,30 @@ add_keymap_file() {
 				add_keymap_file "$1"
 			fi
 		done < <($cat "$f")
-		add "f $f"
-	done < <(find /usr/@(share|lib)/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
+		add "fr ${f##$_optrootfs}"
+	done < <(find "$_optrootfs"/usr/@(share|lib)/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
 }
 
 build() {
 	add <<-!
-	f /usr/lib/udev/rules.d/90-vconsole.rules
+	fr /usr/lib/udev/rules.d/90-vconsole.rules
 
 	L /usr/bin/{loadkeys,setfont}
 	L /usr/lib/systemd/systemd-vconsole-setup
-	f /etc/vconsole.conf
+	fr /etc/vconsole.conf
 	!
 
 	# subshell to avoid namespace pollution
 	(
 	shopt -s nullglob
-	[[ -s /etc/vconsole.conf ]] && source /etc/vconsole.conf
+	[[ -s "$_optrootfs"/etc/vconsole.conf ]] && source "$_optrootfs"/etc/vconsole.conf
 
 	[[ $KEYMAP ]] && add_keymap_file $KEYMAP.map
 	[[ $KEYMAP_TOGGLE ]] && add_keymap_file $KEYMAP_TOGGLE.map
 
 	[[ ! $FONT ]] && return
-	for file in /usr/@(share|lib)/kbd/consolefonts/"$FONT".@(fnt|psf?(u))?(.gz); do
-		add "f $file"
+	for file in "$_optrootfs"/usr/@(share|lib)/kbd/consolefonts/"$FONT".@(fnt|psf?(u))?(.gz); do
+		add "fr ${file##$_optrootfs}"
 	done
 	)
 }

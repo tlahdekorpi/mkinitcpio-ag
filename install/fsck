@@ -23,7 +23,7 @@ build() {
 			add_fsck $usrfstype && (( ++added ))
 		fi
 	else
-		for fsck in /usr/sbin/fsck.*; do
+		for fsck in "$_optrootfs"/usr/sbin/fsck.*; do
 			[[ -f $fsck ]] || continue
 			add_binary "$fsck" && (( ++added ))
 		done
@@ -36,7 +36,7 @@ build() {
 
 	add_binary fsck
 	if [[ -e /etc/e2fsck.conf ]]; then
-		add_file /etc/e2fsck.conf
+		add_file "$_optrootfs"/etc/e2fsck.conf
 	fi
 
 }

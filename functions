@@ -346,7 +346,7 @@ add_firmware() {
     for fw; do
         for fwpath in "${_d_firmware[@]}"; do
             if [[ -f $fwpath/$fw ]]; then
-                add_file "$fwpath/$fw" "$fwpath/$fw" 644 && r=0
+                add_afile "$fwpath/$fw" "$fwpath/$fw" 644 && r=0
                 break
             fi
         done
@@ -450,7 +450,7 @@ add() {
 }
 
 add_full_dir() {
-    add "R $1 $1 0 0"
+    add "Rr $1 $1 0 0"
 }
 
 add_dir() {
@@ -458,10 +458,18 @@ add_dir() {
 }
 
 add_symlink() {
-    add "l ${2:-$(readlink -f $1)} $1"
+    p="${1##$_optrootfs}"
+    pl="$(readlink -f $1)"
+    pl="${pl##$_optrootfs}"
+    add "l ${2:-$pl} $p"
 }
 
 add_file() {
+    p="${1##$_optrootfs}"
+    add "fr $p $2 $3"
+}
+
+add_afile() {
     add "f $1 $2 $3"
 }
 
@@ -476,7 +484,7 @@ add_runscript() {
         return
     fi
 
-    add_file "$script" "/hooks/$hookname" 755
+    add_afile "$script" "/hooks/$hookname" 755
 
     mapfile -t funcs < <(funcgrep '^run_[[:alnum:]_]+' "$script")
 
@@ -504,10 +512,10 @@ add_binary() {
     #   $1: path to binary
     #   $2: destination on initcpio (optional, defaults to same as source)
 
-    local binary=
+    local binary= rbinary=
 
     if [[ ${1:0:1} != '/' ]]; then
-        binary=$(type -P "$1")
+        binary=$(PATH=$RPATH type -P "$1")
     else
         binary=$1
     fi
@@ -517,13 +525,15 @@ add_binary() {
         return 1
     fi
 
+    rbinary="${binary##$_optrootfs}"
+
     dest=${2:-$binary}
     dest=${dest/\/sbin\//\/bin\/}
 
     if [[ "$(head -c1 $binary)" != "#" ]]; then
-        add "L $binary $dest"
+        add "L $rbinary $dest"
     else
-        add "f $binary $dest 0755"
+        add "fr $rbinary $dest 0755"
     fi
 }
 

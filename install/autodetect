@@ -31,7 +31,7 @@ build() {
 	# detect filesystem for root
 	fs_autodetect_failed=1
 
-	for p in '/' '/usr'; do
+	for p in "${_optrootfs:-/}" "$_optrootfs/usr"; do
 		if ! rootfstype=$(findmnt -uno fstype -T $p); then
 			continue
 		fi
@@ -53,7 +53,7 @@ build() {
 	fi
 
 	# detect filesystem for separate /usr
-	if usrfstype=$(findmnt -snero fstype -T '/usr'); then
+	if usrfstype=$(findmnt -snero fstype -T "$_optrootfs"/usr); then
 		add_if_avail "$usrfstype"
 	fi
 
