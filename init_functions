@@ -29,19 +29,17 @@ poll_device() {
 
     [ -b "$device" ] && return 0
 
-    if [ "$udevd_running" -eq 1 ]; then
-        msg "Waiting $seconds seconds for device $device ..." >&2
-        while [ ! -b "$device" -a "$deciseconds" -gt 0 ]; do
-            if [ "$sleepinterval" -ge 10 ]; then
-                sleep 1
-                deciseconds=$(( deciseconds - 10 ))
-            else
-                sleep .$sleepinterval
-                deciseconds=$(( deciseconds - sleepinterval ))
-                sleepinterval=$(( sleepinterval * 2 ))
-            fi
-        done
-    fi
+    msg "Waiting $seconds seconds for device $device ..." >&2
+    while [ ! -b "$device" -a "$deciseconds" -gt 0 ]; do
+        if [ "$sleepinterval" -ge 10 ]; then
+            sleep 1
+            deciseconds=$(( deciseconds - 10 ))
+        else
+            sleep .$sleepinterval
+            deciseconds=$(( deciseconds - sleepinterval ))
+            sleepinterval=$(( sleepinterval * 2 ))
+        fi
+    done
 
     [ -b "$device" ]
 }
@@ -334,7 +332,7 @@ resolve_device() {
     case $device in
         UUID=*|LABEL=*|PARTUUID=*|PARTLABEL=*)
             dev=$(blkid -lt "$device" -o device)
-            if [ -z "$dev" -a "$udevd_running" -eq 1 ]; then
+            if [ -z "$dev" ]; then
                 dev=$(tag_to_udev_path "${device%%=*}" "${device#*=}")
             fi
     esac

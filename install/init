@@ -17,6 +17,17 @@ build() {
 	L /usr/bin/kmod
 	l kmod usr/bin/{dep,ins,rm,ls}mod
 	l kmod usr/bin/mod{probe,info}
+
+	L /usr/lib/systemd/systemd-udevd
+	L /usr/bin/{udevadm,systemd-tmpfiles}
+	L /usr/lib/udev/{ata,scsi}_id
+
+	fr /usr/lib/udev/rules.d/{
+		50-udev-default.rules
+		60-persistent-storage.rules
+		64-btrfs.rules
+		80-drivers.rules
+	}
 	!
 }
 

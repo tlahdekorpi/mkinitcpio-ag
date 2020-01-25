@@ -1,6 +1,5 @@
 #!/usr/bin/ash
 
-udevd_running=0
 mount_handler=default_mount_handler
 init=/sbin/init
 rd_logmask=0
@@ -15,6 +14,10 @@ parse_cmdline </proc/cmdline
 # setup logging as early as possible
 rdlogger_start
 
+kmod static-nodes --format=tmpfiles --output=/run/tmpfiles.d/kmod.conf
+systemd-tmpfiles --prefix=/dev --create --boot
+/usr/lib/systemd/systemd-udevd --daemon --resolve-names=never
+
 for d in ${disablehooks//,/ }; do
     [ -e "/hooks/$d" ] && chmod 644 "/hooks/$d"
 done
@@ -26,6 +29,10 @@ run_hookfunctions 'run_earlyhook' 'early hook' $EARLYHOOKS
 if [ -n "$earlymodules$MODULES" ]; then
     modprobe -qab ${earlymodules//,/ } $MODULES
 fi
+
+udevadm trigger --action=add --type=subsystems
+udevadm trigger --action=add --type=devices
+udevadm settle
 
 run_hookfunctions 'run_hook' 'hook' $HOOKS
 
@@ -45,6 +52,9 @@ fsck_root
 
 run_hookfunctions 'run_latehook' 'late hook' $LATEHOOKS
 run_hookfunctions 'run_cleanuphook' 'cleanup hook' $CLEANUPHOOKS
+
+udevadm control --exit
+udevadm info --cleanup-db
 
 if [ "$(stat -c %D /)" = "$(stat -c %D /new_root)" ]; then
     # Nothing got mounted on /new_root. This is the end, we don't know what to do anymore
