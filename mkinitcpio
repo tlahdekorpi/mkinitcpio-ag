@@ -208,7 +208,9 @@ compute_hookset() {
 }
 
 build_image() {
-    local out=$1 compress=$2 errmsg=
+    local out=$1; shift
+    local compress=$1; shift
+    local errmsg=
     local -a pipesave
 
     case $compress in
@@ -230,7 +232,7 @@ build_image() {
             ;;
     esac
 
-    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" | \
+    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
         $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
     pipesave=("${PIPESTATUS[@]}") # save immediately
 
@@ -528,11 +530,9 @@ trap -- ERR
 
 
 if (( $_optarchive )); then
-    archivegen -rootfs "$_optrootfs" -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE"
-fi
-
-if [[ $_optgenimg ]]; then
-    build_image "$_optgenimg" "$_optcompress"
+    archivegen -rootfs "$_optrootfs" -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
+elif [[ $_optgenimg ]]; then
+    build_image "$_optgenimg" "$_optcompress" "$@"
 elif [[ $_opttargetdir ]]; then
     msg "Build complete."
 else
