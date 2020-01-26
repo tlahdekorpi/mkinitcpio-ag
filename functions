@@ -477,7 +477,9 @@ add_runscript() {
     # Adds a runtime script to the initcpio image. The name is derived from the
     # script which calls it as the basename of the caller.
 
-    local funcs fn script hookname=${BASH_SOURCE[1]##*/}
+    local funcs fn script hookname
+    hookname=${BASH_SOURCE[1]%%/build}
+    hookname=${hookname##*/}
 
     if ! script=$(PATH=$_d_hooks type -P "$hookname"); then
         error "runtime script for \`%s' not found" "$hookname"
@@ -627,13 +629,14 @@ run_build_hook() {
     if [[ ! -d "$script" ]]; then
 	    scripts=("$script")
     else
-	    scripts=("$script"/*)
+	    scripts=("$script"/?(build|*.archive))
     fi
 
     if ! (( ${#scripts[@]} )); then
 	    error 'No scripts found in %s' "$script"
     fi
 
+    OPWD="$PWD"
     cd "$(dirname ${scripts[0]})"
     for x in "${scripts[@]}"; do
 	case "$x" in
@@ -669,6 +672,7 @@ run_build_hook() {
 	    error "$x"
 	fi
     done
+    cd "$OPWD"
 }
 
 try_enable_color() {

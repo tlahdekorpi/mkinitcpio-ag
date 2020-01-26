@@ -136,7 +136,7 @@ hook_help() {
     done
 
     if [[ -d "$script" ]]; then
-	    script+="/$hook"
+	    script+="/build"
     fi
 
     # this will be true for broken symlinks as well
