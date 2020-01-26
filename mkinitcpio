@@ -27,6 +27,8 @@ _optquiet=1 _optcolor=1
 _optskiphooks=() _optaddhooks=() _hooks=()  _optpreset=()
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache
 
+systemd=0
+
 # export a sane PATH
 export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 export RPATH="$PATH"
@@ -473,6 +475,8 @@ compute_hookset
 if (( ${#_opthooks[*]} )); then
     _hooks=(${_opthooks[@]})
 fi
+
+in_array systemd "${_hooks[@]}" && systemd=1
 
 if (( ${#_hooks[*]} == 0 )); then
     die "Invalid config: No hooks found"
