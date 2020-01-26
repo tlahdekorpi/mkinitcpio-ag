@@ -22,7 +22,7 @@ _optrootfs=
 _opthooks=()
 _optmoduleroot= _optgenimg=
 _optcompress= _opttargetdir=
-_optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0
+_optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0 _optstdout=0
 _optquiet=1 _optcolor=1
 _optskiphooks=() _optaddhooks=() _hooks=()  _optpreset=()
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache
@@ -214,8 +214,7 @@ compute_hookset() {
 build_image() {
     local out=$1; shift
     local compress=$1; shift
-    local errmsg=
-    local -a pipesave
+    local errmsg= error=
 
     case $compress in
         cat)
@@ -236,22 +235,21 @@ build_image() {
             ;;
     esac
 
-    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
-        $compress "${COMPRESSION_OPTIONS[@]}" > "$out"
-    pipesave=("${PIPESTATUS[@]}") # save immediately
-
-    if (( pipesave[0] )); then
-        errmsg="archivegen reported an error"
-    elif (( pipesave[1] )); then
-        errmsg="$compress reported an error"
+    if (( $_optstdout )); then
+	    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
+    else
+	    archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
+		$compress "${COMPRESSION_OPTIONS[@]}" > "$out"
     fi
+
+    error=$((${PIPESTATUS[@]/%/+}0))
 
     if (( _builderrors )); then
         warning "errors were encountered during the build. The image may not be complete."
     fi
 
-    if [[ $errmsg ]]; then
-        error "Image generation FAILED: %s" "$errmsg"
+    if (( $error )); then
+        error "Image generation failed"
     elif (( _builderrors == 0 )); then
         msg "Image generation successful"
     fi
@@ -373,6 +371,11 @@ while :; do
             ;;
         -g|--generate)
             shift
+	    if [[ "$1" == - ]]; then
+		    _optgenimg=-
+		    _optstdout=1
+		    continue
+	    fi
             [[ -d $1 ]] && die "Invalid image path -- must not be a directory"
             if ! _optgenimg=$(readlink -f "$1") || [[ ! -e ${_optgenimg%/*} ]]; then
                 die "Unable to write to path: \`%s'" "$1"
@@ -493,7 +496,7 @@ fi
 if [[ $_optgenimg ]]; then
     # check for permissions. if the image doesn't already exist,
     # then check the directory
-    if [[ ( -e $_optgenimg && ! -w $_optgenimg ) ||
+    if (( ! $_optstdout )) && [[ ( -e $_optgenimg && ! -w $_optgenimg ) ||
             ( ! -d ${_optgenimg%/*} || ! -w ${_optgenimg%/*} ) ]]; then
         die 'Unable to write to %s' "$_optgenimg"
     fi
