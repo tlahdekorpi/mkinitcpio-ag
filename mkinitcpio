@@ -19,6 +19,7 @@ _d_presets=mkinitcpio.d
 
 # options and runtime data
 _optrootfs=
+_opthooks=()
 _optmoduleroot= _optgenimg=
 _optcompress= _opttargetdir=
 _optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0
@@ -44,7 +45,8 @@ usage: ${0##*/} [options]
   Options:
    -a, --archive                Print the generated image in archivegen format
    -R, --rootfs <dir>           Use alternate system root
-   -A, --addhooks <hooks>       Add specified hooks, comma separated, to image
+   -o, --hooks <hooks>          Only add specified hooks to image (comma separated)
+   -A, --addhooks <hooks>       Add specified hooks to image (comma separated)
    -c, --config <config>        Use alternate config file. (default: /etc/mkinitcpio.conf)
    -g, --generate <path>        Generate cpio image and write to specified path
    -H, --hookhelp <hookname>    Display help for given hook and exit
@@ -56,7 +58,7 @@ usage: ${0##*/} [options]
    -p, --preset <file>          Build specified preset from /etc/mkinitcpio.d
    -P, --allpresets             Process all preset files in /etc/mkinitcpio.d
    -r, --moduleroot <dir>       Root directory for modules (default: /)
-   -S, --skiphooks <hooks>      Skip specified hooks, comma-separated, during build
+   -S, --skiphooks <hooks>      Skip specified hooks during build (comma separated)
    -s, --save                   Save build directory. (default: no)
    -d, --generatedir <dir>      Write generated image into <dir>
    -t, --builddir <dir>         Use DIR as the temporary build directory
@@ -322,8 +324,8 @@ process_preset() (
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short='aA:R:c:g:H:hk:nLMPp:r:S:sd:t:Vvz:'
-_opt_long=('archive' 'add:' 'rootfs:' 'addhooks:' 'config:' 'generate:' 'hookhelp:' 'help'
+_opt_short='aA:R:o:c:g:H:hk:nLMPp:r:S:sd:t:Vvz:'
+_opt_long=('archive' 'add:' 'rootfs:' 'hooks:' 'addhooks:' 'config:' 'generate:' 'hookhelp:' 'help'
           'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor' 'allpresets'
           'preset:' 'skiphooks:' 'save' 'generatedir:' 'builddir:' 'version' 'verbose' 'compress:')
 
@@ -340,6 +342,10 @@ while :; do
             shift
             _optrootfs="$1"
             RPATH=$(sed "s#:#&$_optrootfs#g" <<< "$_optrootfs$PATH")
+            ;;
+        -o|--hooks)
+            shift
+            IFS=, read -r -a _opthooks <<< "$1"
             ;;
         # --add remains for backwards compat
         -A|--add|--addhooks)
@@ -463,6 +469,10 @@ arrayize_config
 # after returning, hooks are populated into the array '_hooks'
 # HOOKS should not be referenced from here on
 compute_hookset
+
+if (( ${#_opthooks[*]} )); then
+    _hooks=(${_opthooks[@]})
+fi
 
 if (( ${#_hooks[*]} == 0 )); then
     die "Invalid config: No hooks found"
