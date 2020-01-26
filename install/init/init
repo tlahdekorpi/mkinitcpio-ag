@@ -1,7 +1,5 @@
 #!/bin/bash
 build() {
-	local init=$(PATH=$PWD:/usr/lib/initcpio type -P init) || return 1
-
 	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 
 	add <<-!
@@ -9,7 +7,7 @@ build() {
 	l usr/{sbin,bin,lib} /
 	l bin usr/sbin
 
-	f $init{,_functions} / 0755
+	f $PWD/scripts/init{,_functions} / 0755
 
 	L /usr/sbin/{busybox,blkid,switch_root} usr/bin
 	L /usr/bin/{u,}mount

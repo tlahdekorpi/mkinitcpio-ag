@@ -598,11 +598,21 @@ initialize_buildroot() {
 }
 
 run_build_hook() {
-    local hook=$1 script= resolved=
+    local hook=$1 script= resolved= paths= idir=
     local MODULES=() BINARIES=() FILES=() SCRIPT=
 
-    # find script in install dirs
-    if ! script=$(PATH=$_d_install type -P "$hook"); then
+    shopt -s nullglob
+    declare -a scripts
+
+    IFS=':' read -ra paths <<< "$_d_install"
+    for x in "${paths[@]}"; do
+	    [[ ! -e "$x/$hook" ]] && continue
+	    script="$x/$hook"
+	    idir="$x"
+	    break
+    done
+
+    if [[ ! "$script" ]]; then
         error "Hook '$hook' cannot be found"
         return 1
     fi
@@ -614,28 +624,51 @@ run_build_hook() {
         script=$resolved
     fi
 
-    # source
-    unset -f build
-    if ! . "$script"; then
-        error 'Failed to read %s' "$script"
-        return 1
-    fi
-
-    if ! declare -f build >/dev/null; then
-        error 'Hook '$script' has no build function'
-        return 1
-    fi
-
-    # run
-    if (( _optquiet )); then
-        msg2 "Running build hook: [%s]" "${script##*/}"
+    if [[ ! -d "$script" ]]; then
+	    scripts=("$script")
     else
-        msg2 "Running build hook: [%s]" "$script"
+	    scripts=("$script"/*)
     fi
 
-    if ! build; then
-        error "$script"
+    if ! (( ${#scripts[@]} )); then
+	    error 'No scripts found in %s' "$script"
     fi
+
+    cd "$(dirname ${scripts[0]})"
+    for x in "${scripts[@]}"; do
+	case "$x" in
+	*.archive)
+		msg2 "archive: %s" "${x##$idir/}"
+		add < "$x"
+		continue
+		;;
+	esac
+
+	[[ -d "$x" ]] && continue
+
+	# source
+	unset -f build
+	if ! . "$x"; then
+	    error 'Failed to read %s' "$x"
+	    return 1
+	fi
+
+	if ! declare -f build >/dev/null; then
+	    error 'Hook '$x' has no build function'
+	    return 1
+	fi
+
+	# run
+	if (( _optquiet )); then
+	    msg2 "build:   %s" "${x##$idir/}"
+	else
+	    msg2 "build:   %s" "$x"
+	fi
+
+	if ! build; then
+	    error "$x"
+	fi
+    done
 }
 
 try_enable_color() {

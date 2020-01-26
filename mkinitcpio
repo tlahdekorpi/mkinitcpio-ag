@@ -11,7 +11,7 @@ shopt -s extglob
 
 # needed files/directories
 _f_functions=functions
-_f_config=mkinitcpio.conf
+_f_config="$(realpath mkinitcpio.conf)"
 _d_hooks="$PWD/hooks:/usr/lib/initcpio/hooks:/lib/initcpio/hooks"
 _d_install="$PWD/install:/usr/lib/initcpio/install:/lib/initcpio/install"
 _d_firmware=({/usr,}/lib/firmware/updates {/usr,}/lib/firmware)
@@ -121,11 +121,23 @@ resolve_kernver() {
 }
 
 hook_help() {
-    local resolved script=$(PATH=$_d_install type -p "$1")
+    local resolved script hook=$1
+    local -a paths
+
+    IFS=':' read -ra paths <<< "$_d_install"
+    for x in "${paths[@]}"; do
+	    [[ ! -e "$x/$hook" ]] && continue
+	    script="$x/$hook"
+	    break
+    done
+
+    if [[ -d "$script" ]]; then
+	    script+="/$hook"
+    fi
 
     # this will be true for broken symlinks as well
     if [[ -z $script ]]; then
-        error "Hook '%s' not found" "$1"
+        error "Hook '%s' not found" "$hook"
         return 1
     fi
 
@@ -136,14 +148,14 @@ hook_help() {
 
     . "$script"
     if ! declare -f help >/dev/null; then
-        error "No help for hook $1"
+        error "No help for hook $hook"
         return 1
     fi
 
-    msg "Help for hook '$1':"
+    msg "Help for hook '$hook':"
     help
 
-    list_hookpoints "$1"
+    list_hookpoints "$hook"
 }
 
 hook_list() {
