@@ -3,7 +3,7 @@ build() {
 	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 
 	add <<-!
-	d {sys,dev,proc,tmp,run,new_root}
+	d {sys,dev,proc,tmp,run,sysroot}
 	l usr/{sbin,bin,lib} /
 	l bin usr/sbin
 
