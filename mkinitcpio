@@ -494,7 +494,8 @@ if [[ $_optgenimg ]]; then
         die 'Unable to write to %s' "$_optgenimg"
     fi
 
-    _optcompress=${_optcompress:-${COMPRESSION:-gzip}}
+    default_comp="$(type -P pigz gzip|head -n1)"
+    _optcompress=${_optcompress:-${COMPRESSION:-${default_comp##*/}}}
     if ! type -P "$_optcompress" >/dev/null; then
         warning "Unable to locate compression method: %s" "$_optcompress"
         _optcompress=cat
