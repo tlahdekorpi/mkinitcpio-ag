@@ -26,9 +26,12 @@ done
 
 run_hookfunctions 'run_earlyhook' 'early hook' $EARLYHOOKS
 
-if [ -n "$earlymodules$MODULES" ]; then
-    modprobe -qab ${earlymodules//,/ } $MODULES
+if [ -n "$earlymodules" ]; then
+	mkdir /run/modules-load.d
+	printf '%s\n' ${earlymodules//,/ } > /run/modules-load.d/earlymodules.conf
 fi
+
+/usr/lib/systemd/systemd-modules-load
 
 udevadm trigger --action=add --type=subsystems
 udevadm trigger --action=add --type=devices
