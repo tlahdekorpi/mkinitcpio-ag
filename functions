@@ -547,6 +547,13 @@ parse_config() {
 	map add_binary "${BINARIES[@]}"
 	map add_file "${FILES[@]}"
 
+	add <<-?
+	c version - - - <<!
+	archivegen: $(archivegen -version)
+	mkinitcpio: $version
+	!
+	?
+
 	add "f $config buildconfig - 0 0"
 
 	# When MODULES is not an array (but instead implicitly converted at
