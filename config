@@ -1,0 +1,45 @@
+## HOOKS
+# Use 'init' or 'systemd'.
+HOOKS=(
+	init
+	# systemd
+	fsck
+	modconf
+	autodetect
+	block
+	filesystems
+	keyboard
+)
+
+## COMPRESSION
+# List of compressors in order of preference.
+# Use 'cat' to create an uncompressed image.
+COMPRESSION=(
+	pigz
+	gzip
+	# xz
+	# lz4
+	# cat
+)
+
+## MODULES
+# List of modules to load at early boot.
+# MODULES=(
+# )
+
+## BINARIES
+# List of binaries to include in the archive.
+# BINARIES=(
+# )
+
+## FILES
+# List of files to include in the archive.
+# FILES=(
+# )
+
+## ARCHIVEGEN
+# List of extra arguments passed to archivegen.
+# ARCHIVEGEN_OPTIONS=(
+# 	-warn.replace
+# 	-warn.emptyglob
+# )
