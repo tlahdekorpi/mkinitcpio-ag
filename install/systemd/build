@@ -204,14 +204,6 @@ build() {
 	ExecStart=
 	ExecStart=/usr/lib/systemd/systemd-udevd --resolve-names=never
 	!
-
-	(
-	source "$_f_config"; set -f
-	(( !${#MODULES[@]} )) && return 0
-	add  'c usr/lib/modules-load.d/modules.conf - - - <<!'
-	addf '%s\n' "${MODULES[@]}"
-	add  '!'
-	)
 }
 
 help() { cat <<!

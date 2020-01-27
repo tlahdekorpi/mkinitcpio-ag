@@ -21,7 +21,7 @@ _d_presets=mkinitcpio.d
 _optrootfs=
 _opthooks=()
 _optmoduleroot= _optgenimg=
-_optcompress= _opttargetdir=
+_optcompress=
 _optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0 _optstdout=0
 _optquiet=1 _optcolor=1
 _optskiphooks=() _optaddhooks=() _hooks=()  _optpreset=()
@@ -62,7 +62,6 @@ usage: ${0##*/} [options]
    -r, --moduleroot <dir>       Root directory for modules (default: /)
    -S, --skiphooks <hooks>      Skip specified hooks during build (comma separated)
    -s, --save                   Save build directory. (default: no)
-   -d, --generatedir <dir>      Write generated image into <dir>
    -t, --builddir <dir>         Use DIR as the temporary build directory
    -V, --version                Display version information and exit
    -v, --verbose                Verbose output (default: no)
@@ -324,10 +323,10 @@ process_preset() (
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short='aA:R:o:c:g:H:hk:nLMPp:r:S:sd:t:Vvz:'
-_opt_long=('archive' 'add:' 'rootfs:' 'hooks:' 'addhooks:' 'config:' 'generate:' 'hookhelp:' 'help'
+_opt_short='aA:R:o:c:g:H:hk:nLMPp:r:S:st:Vvz:'
+_opt_long=('archive' 'add:' 'rootfs:' 'hooks:' 'addhooks:' 'config:' 'hookhelp:' 'help'
           'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor' 'allpresets'
-          'preset:' 'skiphooks:' 'save' 'generatedir:' 'builddir:' 'version' 'verbose' 'compress:')
+          'preset:' 'skiphooks:' 'save' 'builddir:' 'version' 'verbose' 'compress:')
 
 parseopts "$_opt_short" "${_opt_long[@]}" -- "$@" || exit 1
 set -- "${OPTRET[@]}"
@@ -364,10 +363,6 @@ while :; do
             ;;
         -s|--save)
             _optsavetree=1
-            ;;
-        -d|--generatedir)
-            shift
-            _opttargetdir=$1
             ;;
         -g|--generate)
             shift
@@ -463,9 +458,9 @@ if [[ $KERNELVERSION != 'none' ]]; then
     [[ -d $_d_kmoduledir ]] || die "'$_d_kmoduledir' is not a valid kernel module directory"
 fi
 
-_d_workdir=$(initialize_buildroot "$KERNELVERSION" "$_opttargetdir") || cleanup 1
-BUILDROOT=${_opttargetdir:-$_d_workdir/root}
-BUILDARCHIVE=${_opttargetdir:-$_d_workdir/archive}
+_d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup 1
+BUILDROOT="$_d_workdir/root"
+BUILDARCHIVE="$_d_workdir/archive"
 
 . "$_f_config" || die "Failed to read configuration \`%s'" "$_f_config"
 
@@ -509,8 +504,6 @@ if [[ $_optgenimg ]]; then
     fi
 
     msg "Starting build: %s" "$KERNELVERSION"
-elif [[ $_opttargetdir ]]; then
-    msg "Starting build: %s" "$KERNELVERSION"
 else
     msg "Starting dry run: %s" "$KERNELVERSION"
 fi
@@ -551,8 +544,6 @@ if (( $_optarchive )); then
     archivegen -rootfs "$_optrootfs" -print -elf.expand "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 elif [[ $_optgenimg ]]; then
     build_image "$_optgenimg" "$_optcompress" "$@"
-elif [[ $_opttargetdir ]]; then
-    msg "Build complete."
 else
     msg "Dry run complete, use -g IMAGE to generate a real image"
 fi

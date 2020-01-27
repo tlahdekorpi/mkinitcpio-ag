@@ -540,63 +540,45 @@ add_binary() {
 }
 
 parse_config() {
-    # parse key global variables set by the config file.
+	# parse key global variables set by the config file.
+	local config="$1"
 
-    map add_module "${MODULES[@]}"
-    map add_binary "${BINARIES[@]}"
-    map add_file "${FILES[@]}"
+	map add_module "${MODULES[@]}"
+	map add_binary "${BINARIES[@]}"
+	map add_file "${FILES[@]}"
 
-    tee "$BUILDROOT/buildconfig" < "$1" | {
-        # When MODULES is not an array (but instead implicitly converted at
-        # startup), sourcing the config causes the string value of MODULES
-        # to be assigned as MODULES[0]. Avoid this by explicitly unsetting
-        # MODULES before re-sourcing the config.
-        unset MODULES
+	add "f $config buildconfig - 0 0"
 
-        . /dev/stdin
+	# When MODULES is not an array (but instead implicitly converted at
+	# startup), sourcing the config causes the string value of MODULES
+	# to be assigned as MODULES[0]. Avoid this by explicitly unsetting
+	# MODULES before re-sourcing the config.
+	unset MODULES
+	source "$config"
 
-        # arrayize MODULES if necessary.
-        [[ ${MODULES@a} != *a* ]] && read -ra MODULES <<<"${MODULES//-/_}"
+	# arrayize MODULES if necessary.
+	[[ ${MODULES@a} != *a* ]] && read -ra MODULES <<<"${MODULES//-/_}"
 
-        for mod in "${MODULES[@]%\?}"; do
-            mod=${mod//-/_}
-            # only add real modules (2 == builtin)
-            (( _addedmodules["$mod"] == 1 )) && add+=("$mod")
-        done
-        (( ${#add[*]} )) && printf 'MODULES="%s"\n' "${add[*]}"
+	for mod in "${MODULES[@]%\?}"; do
+		mod=${mod//-/_}
+		# only add real modules (2 == builtin)
+		(( _addedmodules["$mod"] == 1 )) && add+=("$mod")
+	done
 
-        printf '%s="%s"\n' \
-            'EARLYHOOKS' "${_runhooks['early']# }" \
-            'HOOKS' "${_runhooks['hooks']# }" \
-            'LATEHOOKS' "${_runhooks['late']# }" \
-            'CLEANUPHOOKS' "${_runhooks['cleanup']% }"
-    } >"$BUILDROOT/config"
-}
+	add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
+	addf '%s\n' "${add[@]}"
+	add  '!'
 
-initialize_buildroot() {
-    # creates a temporary directory for the buildroot and initialize it with a
-    # basic set of necessary directories and symlinks
+	(( systemd )) && return
 
-    local workdir= kernver=$1 arch=$(uname -m) buildroot buildarchive
-
-    if ! workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX); then
-        error 'Failed to create temporary working directory in %s' "${TMPDIR:-/tmp}"
-        return 1
-    fi
-    buildroot=${2:-$workdir/root}
-    buildarchive=${2:-$workdir/archive}
-
-    install -dm755 "$buildroot"
-
-    if [[ ! -w ${2:-$workdir} ]]; then
-        error 'Unable to write to build root: %s' "$buildroot"
-        return 1
-    fi
-
-    printf 'R %s - 0 0\n' "$buildroot" >> "$buildarchive"
-    printf 'c VERSION - - - %s\n' "$version" >> "$buildarchive"
-
-    printf '%s' "$workdir"
+	add <<-?
+	c config - - - <<!
+	  EARLYHOOKS='${_runhooks[early]# }'
+	       HOOKS='${_runhooks[hooks]# }'
+	   LATEHOOKS='${_runhooks[late]# }'
+	CLEANUPHOOKS='${_runhooks[cleanup]% }'
+	!
+	?
 }
 
 run_build_hook() {
