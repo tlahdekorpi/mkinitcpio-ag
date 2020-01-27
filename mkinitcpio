@@ -8,14 +8,19 @@ declare -r version=%VERSION%
 shopt -s extglob
 
 ### globals within mkinitcpio, but not intended to be used by hooks
+_devel=1
 
 # needed files/directories
-_f_functions=functions
-_f_config="$(realpath mkinitcpio.conf)"
-_d_hooks="$PWD/hooks:/usr/lib/initcpio/hooks:/lib/initcpio/hooks"
-_d_install="$PWD/install:/usr/lib/initcpio/install:/lib/initcpio/install"
+_f_functions=/usr/lib/mkinitcpio/functions
+_d_config=/etc/mkinitcpio:/usr/lib/mkinitcpio
+_d_hooks=/etc/mkinitcpio/hooks:/usr/lib/mkinitcpio/hooks
+_d_install=/etc/mkinitcpio/install:/usr/lib/mkinitcpio/install
 _d_firmware=({/usr,}/lib/firmware/updates {/usr,}/lib/firmware)
-_d_presets=mkinitcpio.d
+
+if (( _devel )); then
+	_f_functions="$(realpath $PWD/functions)"
+	_d_config="$PWD"; _d_hooks="$PWD/hooks"; _d_install="$PWD/install"
+fi
 
 # options and runtime data
 _optrootfs=
@@ -24,7 +29,7 @@ _optmoduleroot= _optgenimg=
 _optcompress=
 _optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0 _optstdout=0
 _optquiet=1 _optcolor=1
-_optskiphooks=() _optaddhooks=() _hooks=()  _optpreset=()
+_optskiphooks=() _optaddhooks=() _hooks=()
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache
 
 systemd=0
@@ -57,8 +62,6 @@ usage: ${0##*/} [options]
    -L, --listhooks              List all available hooks
    -M, --automods               Display modules found via autodetection
    -n, --nocolor                Disable colorized output messages
-   -p, --preset <file>          Build specified preset from /etc/mkinitcpio.d
-   -P, --allpresets             Process all preset files in /etc/mkinitcpio.d
    -r, --moduleroot <dir>       Root directory for modules (default: /)
    -S, --skiphooks <hooks>      Skip specified hooks during build (comma separated)
    -s, --save                   Save build directory. (default: no)
@@ -80,8 +83,7 @@ cleanup() {
     local err=${1:-$?}
 
     if [[ $_d_workdir ]]; then
-        # when _optpreset is set, we're in the main loop, not a worker process
-        if (( _optsavetree )) && [[ -z ${_optpreset[*]} ]]; then
+        if (( _optsavetree )); then
             printf '%s\n' "${!_autodetect_cache[@]}" > "$_d_workdir/autodetect_modules"
             msg "build directory saved in %s" "$_d_workdir"
         else
@@ -254,79 +256,15 @@ build_image() {
     fi
 }
 
-process_preset() (
-    local preset=$1 preset_image= preset_options=
-    local -a preset_mkopts preset_cmd
-
-    if (( MKINITCPIO_PROCESS_PRESET )); then
-        error "You appear to be calling a preset from a preset. This is a configuration error."
-        cleanup 1
-    fi
-
-    # allow path to preset file, else resolve it in $_d_presets
-    if [[ $preset != */* ]]; then
-        printf -v preset '%s/%s.preset' "$_d_presets" "$preset"
-    fi
-
-    . "$preset" || die "Failed to load preset: \`%s'" "$preset"
-
-    # Use -m and -v options specified earlier
-    (( _optquiet )) || preset_mkopts+=(-v)
-    (( _optcolor )) || preset_mkopts+=(-n)
-
-    (( _optsavetree )) && preset_mkopts+=(-s)
-
-    ret=0
-    for p in "${PRESETS[@]}"; do
-        msg "Building image from preset: $preset: '$p'"
-        preset_cmd=("${preset_mkopts[@]}")
-
-        preset_kver=${p}_kver
-        if [[ ${!preset_kver:-$ALL_kver} ]]; then
-            preset_cmd+=(-k "${!preset_kver:-$ALL_kver}")
-        else
-            warning "No kernel version specified. Skipping image \`%s'" "$p"
-            continue
-        fi
-
-        preset_config=${p}_config
-        if [[ ${!preset_config:-$ALL_config} ]]; then
-            preset_cmd+=(-c "${!preset_config:-$ALL_config}")
-        else
-            warning "No configuration file specified. Skipping image \`%s'" "$p"
-            continue
-        fi
-
-        preset_image=${p}_image
-        if [[ ${!preset_image} ]]; then
-            preset_cmd+=(-g "${!preset_image}")
-        else
-            warning "No image file specified. Skipping image \`%s'" "$p"
-            continue
-        fi
-
-        preset_options=${p}_options
-        if [[ ${!preset_options} ]]; then
-            preset_cmd+=(${!preset_options}) # intentional word splitting
-        fi
-
-        msg2 "${preset_cmd[*]}"
-        MKINITCPIO_PROCESS_PRESET=1 "$0" "${preset_cmd[@]}"
-        (( $? )) && ret=1
-    done
-
-    exit $ret
-)
-
 . "$_f_functions"
 
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short='aA:R:o:c:g:H:hk:nLMPp:r:S:st:Vvz:'
+_opt_short='aA:R:o:c:g:H:hk:nLMr:S:st:Vvz:'
 _opt_long=('archive' 'add:' 'rootfs:' 'hooks:' 'addhooks:' 'config:' 'hookhelp:' 'help'
-          'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor' 'allpresets'
-          'preset:' 'skiphooks:' 'save' 'builddir:' 'version' 'verbose' 'compress:')
+          'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor'
+          'skiphooks:' 'save' 'builddir:' 'version' 'verbose' 'compress:')
 
 parseopts "$_opt_short" "${_opt_long[@]}" -- "$@" || exit 1
 set -- "${OPTRET[@]}"
@@ -384,10 +322,6 @@ while :; do
             version
             cleanup 0
             ;;
-        -p|--preset)
-            shift
-            _optpreset+=("$1")
-            ;;
         -n|--nocolor)
             _optcolor=0
             ;;
@@ -411,10 +345,6 @@ while :; do
             ;;
         -M|--automods)
             _optshowautomods=1
-            ;;
-        -P|--allpresets)
-            _optpreset=("$_d_presets"/*.preset)
-            [[ -e ${_optpreset[0]} ]] || die "No presets found in $_d_presets"
             ;;
         -t|--builddir)
             shift
@@ -446,12 +376,6 @@ fi
 [[ -e /proc/self/mountinfo ]] || die "/proc must be mounted!"
 [[ -e /dev/fd ]] || die "/dev must be mounted!"
 
-# use preset $_optpreset (exits after processing)
-if (( ${#_optpreset[*]} )); then
-    map process_preset "${_optpreset[@]}"
-    exit
-fi
-
 if [[ $KERNELVERSION != 'none' ]]; then
     KERNELVERSION=$(resolve_kernver "$KERNELVERSION") || cleanup 1
     _d_kmoduledir=$_optmoduleroot/lib/modules/$KERNELVERSION
@@ -461,6 +385,9 @@ fi
 _d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup 1
 BUILDROOT="$_d_workdir/root"
 BUILDARCHIVE="$_d_workdir/archive"
+
+_f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
+[[ -f "$_f_config" ]] || die "missing config file: %s" "$_f_config"
 
 . "$_f_config" || die "Failed to read configuration \`%s'" "$_f_config"
 
@@ -496,8 +423,10 @@ if [[ $_optgenimg ]]; then
         die 'Unable to write to %s' "$_optgenimg"
     fi
 
-    default_comp="$(type -P pigz gzip|head -n1)"
-    _optcompress=${_optcompress:-${COMPRESSION:-${default_comp##*/}}}
+    COMPRESSION="$(type -P ${COMPRESSION[@]} | head -n1)"
+    COMPRESSION="${COMPRESSION##*/}"
+
+    _optcompress=${_optcompress:-${COMPRESSION:-gzip}}
     if ! type -P "$_optcompress" >/dev/null; then
         warning "Unable to locate compression method: %s" "$_optcompress"
         _optcompress=cat
