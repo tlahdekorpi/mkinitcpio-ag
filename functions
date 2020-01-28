@@ -175,7 +175,7 @@ msg3() {
 }
 
 msgul() {
-	printf "${_color_ul}$1${_color_none}\n" "${@:2}" >&2
+	printf "${_color_ul}$1${_color_none}\n" "${@:2}"
 }
 
 msgbl() {

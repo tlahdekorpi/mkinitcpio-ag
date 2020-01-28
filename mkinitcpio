@@ -14,7 +14,7 @@ declare _optrootfs _optmoduleroot _optgenimg _optcompress
 declare -a _hooks _opthooks _optskiphooks _optaddhooks
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive _optstdout
-declare -i _optforce _optquiet _optdebug _optcolor
+declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
 
 _devel=1
 if (( _devel )); then
@@ -140,9 +140,9 @@ hook_help() {
 	fi
 
 	help
+	unset help
 }
 
-# XXX: look
 hook_list() {
 	local resolved
 	local -a paths hooklist depr
@@ -163,12 +163,10 @@ hook_list() {
 				continue
 			fi
 
-			hooklist+=("${hook##*/}")
+			msgul "${hook##*/}"
+			hook_help "${hook##*/}" | awk '{print "  ", $0} END{print ""}'
 		done
 	done
-
-	msgul 'HOOKS'
-	printf '%s\n' "${hooklist[@]}" | sort -u | column -c"${COLUMNS:-$(tput cols)}"
 
 	(( ! ${#depr[*]} )) && return
 
@@ -327,8 +325,7 @@ while :; do
 		exit
 		;;
 	-L|--listhooks)
-		hook_list
-		exit 0
+		_opthooklist=1
 		;;
 	-M|--automods)
 		_optshowautomods=1
@@ -349,9 +346,13 @@ while :; do
 	shift
 done
 
-# XXX: BUG, _optcolor 
 if [[ -t 1 ]] && (( ! _optcolor )); then
 	try_enable_color
+fi
+
+if (( _opthooklist )); then
+	hook_list
+	exit 0
 fi
 
 # insist that /proc and /dev be mounted (important for chroots)
