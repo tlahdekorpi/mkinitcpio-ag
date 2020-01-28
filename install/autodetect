@@ -60,7 +60,7 @@ build() {
 	# scan for md raid devices
 	md_devs=(/sys/class/block/md*/md/level)
 	if [[ -e $md_devs ]]; then
-		quiet 'found %d mdadm arrays to scan' "${#md_devs[*]}"
+		debug 'found %d mdadm arrays to scan' "${#md_devs[*]}"
 		mapfile -t mods < <(awk '{ gsub(/raid[456]/, "raid456"); print; }' "${md_devs[@]}")
 		for m in "${mods[@]}"; do
 			_autodetect_cache["$m"]=1
@@ -68,7 +68,7 @@ build() {
 	fi
 
 	if (( ${#_autodetect_cache[*]} )); then
-		quiet 'caching %d modules' "${#_autodetect_cache[*]}"
+		debug 'caching %d modules' "${#_autodetect_cache[*]}"
 	fi
 }
 

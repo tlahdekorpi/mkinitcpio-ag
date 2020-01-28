@@ -158,20 +158,20 @@ kver() {
 	printf '%s' "$kver"
 }
 
-quiet() {
-	(( _optquiet )) || msg2 "$@"
+debug() {
+	(( ! _optdebug )) || msg "debug: $@"
 }
 
 msg() {
-	printf "$1\n" "${@:2}" >&2
+	(( ! _optquiet )) || printf "$1\n" "${@:2}" >&2
 }
 
 msg2() {
-	printf "  $1\n" "${@:2}" >&2
+	(( ! _optquiet )) || printf "  $1\n" "${@:2}" >&2
 }
 
 msg3() {
-	printf "    $1\n" "${@:2}" >&2
+	(( ! _optquiet )) || printf "    $1\n" "${@:2}" >&2
 }
 
 msgul() {
@@ -363,7 +363,7 @@ add_module() {
 		filename)
 			found=1
 			module=${value##*/} module=${module%.ko*}
-			quiet "adding module: %s" "$module"
+			debug "adding module: %s" "$module"
 			_modpaths["$value"]=1
 			_addedmodules["${module//-/_}"]=1
 			;;

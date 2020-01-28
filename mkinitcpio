@@ -14,8 +14,7 @@ declare _optrootfs _optmoduleroot _optgenimg _optcompress
 declare -a _hooks _opthooks _optskiphooks _optaddhooks
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive _optstdout
-declare -i _optforce
-declare -i _optquiet=1 _optcolor=1
+declare -i _optforce _optquiet _optdebug _optcolor
 
 _devel=1
 if (( _devel )); then
@@ -44,7 +43,8 @@ Options:
   -h --help              Show this help text
   -V --version           Show package version
   -a --archive           Show image archive
-  -v --verbose           Use verbose output
+  -v --verbose           Show verbose output
+  -d --debug             Show debug output
   -g --write FILE        Write image to FILE
   -f --force             Ignore existing files
   -c --config FILE       Use config FILE
@@ -228,13 +228,14 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:fhH:o:k:Lr:nR:sS:vVg:
+_opt_short=A:aMz:c:dfhH:o:k:Lr:nR:sS:vVg:
 _opt_long=(
 	add: addhooks:
 	archive
 	automods
 	compress:
 	config:
+	debug
 	force
 	help
 	hookhelp:
@@ -305,10 +306,14 @@ while :; do
 		cleanup 0
 		;;
 	-n|--nocolor)
-		_optcolor=0
+		_optcolor=1
 		;;
 	-v|--verbose)
-		_optquiet=0
+		_optquiet=1
+		;;
+	-d|--debug)
+		_optquiet=1
+		_optdebug=1
 		;;
 	-S|--skiphooks)
 		shift
@@ -345,7 +350,7 @@ while :; do
 done
 
 # XXX: BUG, _optcolor 
-if [[ -t 1 ]] && (( _optcolor )); then
+if [[ -t 1 ]] && (( ! _optcolor )); then
 	try_enable_color
 fi
 
