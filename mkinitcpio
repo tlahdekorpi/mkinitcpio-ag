@@ -13,8 +13,9 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 declare _optrootfs _optmoduleroot _optgenimg _optcompress
 declare -a _hooks _opthooks _optskiphooks _optaddhooks
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
-declare -i _optshowautomods _optsavetree _optshowmods _optarchive _optstdout
+declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
+declare -i _optstdout=1
 
 _devel=1
 if (( _devel )); then
@@ -208,9 +209,9 @@ build_image() {
 		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand \
 			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
 			$compress "${COMPRESSION_OPTIONS[@]}" > "$out"
-	fi
 
-	error=$((${PIPESTATUS[@]/%/+}0))
+		error=$(( ${PIPESTATUS[1]} ))
+	fi
 
 	if (( _builderrors )); then
 		warning "errors were encountered during the build. The image may not be complete."
@@ -291,9 +292,9 @@ while :; do
 		;;
 	-g|--write)
 		shift
+		_optstdout=0
 		_optgenimg="$1"
 		[[ -d "$1" ]] && die 'path is a directory'
-		[[ "$1" == - ]] && _optstdout=1
 		;;
 	-h|--help)
 		usage
@@ -396,25 +397,21 @@ if (( _optshowautomods )); then
 	cleanup 0
 fi
 
-if [[ $_optgenimg ]]; then
-	# do not overwrite existing files without force
-	if (( ! _optstdout )) && [[ -f $_optgenimg ]]; then
-		(( _optforce )) || die 'cannot write image: file exists'
-	fi
-
-	COMPRESSION="$(type -P ${COMPRESSION[@]} | head -n1)"
-	COMPRESSION="${COMPRESSION##*/}"
-
-	_optcompress=${_optcompress:-${COMPRESSION:-gzip}}
-	if ! type -P "$_optcompress" > /dev/null; then
-		warning 'no such compressor: %s' "$_optcompress"
-		_optcompress=cat
-	fi
-
-	msg "$KERNELVERSION, $_optcompress${_optrootfs:+, sysroot:$_optrootfs}"
-else
-	msgbl dryrun "${KERNELVERSION}${_optrootfs:+, sysroot:$_optrootfs}"
+# do not overwrite existing files without force
+if (( ! _optstdout )) && [[ -f $_optgenimg ]]; then
+	(( _optforce )) || die 'cannot write image: file exists'
 fi
+
+COMPRESSION="$(type -P ${COMPRESSION[@]} | head -n1)"
+COMPRESSION="${COMPRESSION##*/}"
+
+_optcompress=${_optcompress:-${COMPRESSION:-gzip}}
+if ! type -P "$_optcompress" > /dev/null; then
+	warning 'no such compressor: %s' "$_optcompress"
+	_optcompress=cat
+fi
+
+msg "$KERNELVERSION, $_optcompress${_optrootfs:+, sysroot:$_optrootfs}"
 
 # set functrace and trap to catch errors in add_* functions
 declare -i _builderrors=0
@@ -451,8 +448,9 @@ trap -- ERR
 if (( $_optarchive )); then
 	archivegen -rootfs "$_optrootfs" -print -elf.expand \
 		"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
-elif [[ $_optgenimg ]]; then
-	build_image "$_optgenimg" "$_optcompress" "$@"
+	exit $?
 fi
+
+build_image "$_optgenimg" "$_optcompress" "$@"
 
 cleanup $(( !!_builderrors ))
