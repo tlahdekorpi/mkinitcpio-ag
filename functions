@@ -1,570 +1,544 @@
 #!/bin/bash
-
 parseopts() {
-    local opt= optarg= i= shortopts=$1
-    local -a longopts=() unused_argv=()
+	local opt optarg i shortopts=$1
+	local -a longopts unused_argv
 
-    shift
-    while [[ $1 && $1 != '--' ]]; do
-        longopts+=("$1")
-        shift
-    done
-    shift
+	shift
+	while [[ $1 && $1 != '--' ]]; do
+		longopts+=("$1")
+		shift
+	done
+	shift
 
-    longoptmatch() {
-        local o longmatch=()
-        for o in "${longopts[@]}"; do
-            if [[ ${o%:} = "$1" ]]; then
-                longmatch=("$o")
-                break
-            fi
-            [[ ${o%:} = "$1"* ]] && longmatch+=("$o")
-        done
+	longoptmatch() {
+		local o
+		local -a longmatch
 
-        case ${#longmatch[*]} in
-            1)
-                # success, override with opt and return arg req (0 == none, 1 == required)
-                opt=${longmatch%:}
-                if [[ $longmatch = *: ]]; then
-                    return 1
-                else
-                    return 0
-                fi ;;
-            0)
-                # fail, no match found
-                return 255 ;;
-            *)
-                # fail, ambiguous match
-                printf "%s: option '%s' is ambiguous; possibilities:%s\n" "${0##*/}" \
-                    "--$1" "$(printf " '%s'" "${longmatch[@]%:}")"
-                return 254 ;;
-        esac
-    }
+		for o in "${longopts[@]}"; do
+			if [[ ${o%:} = "$1" ]]; then
+				longmatch=("$o")
+				break
+			fi
+			[[ ${o%:} = "$1"* ]] && longmatch+=("$o")
+		done
 
-    while (( $# )); do
-        case $1 in
-            --) # explicit end of options
-                shift
-                break
-                ;;
-            -[!-]*) # short option
-                for (( i = 1; i < ${#1}; i++ )); do
-                    opt=${1:i:1}
+		case ${#longmatch[*]} in
+		1) # success, override with opt and return arg req (0 == none, 1 == required)
+			opt=${longmatch%:}
+			if [[ $longmatch = *: ]]; then
+			    return 1
+			else
+			    return 0
+			fi
+			;;
 
-                    # option doesn't exist
-                    if [[ $shortopts != *$opt* ]]; then
-                        printf "%s: invalid option -- '%s'\n" "${0##*/}" "$opt"
-                        OPTRET=(--)
-                        return 1
-                    fi
+		0) # fail, no match found
+			return 255
+			;;
 
-                    OPTRET+=("-$opt")
-                    # option requires optarg
-                    if [[ $shortopts = *$opt:* ]]; then
-                        # if we're not at the end of the option chunk, the rest is the optarg
-                        if (( i < ${#1} - 1 )); then
-                            OPTRET+=("${1:i+1}")
-                            break
-                        # if we're at the end, grab the the next positional, if it exists
-                        elif (( i == ${#1} - 1 )) && [[ $2 ]]; then
-                            OPTRET+=("$2")
-                            shift
-                            break
-                        # parse failure
-                        else
-                            printf "%s: option '%s' requires an argument\n" "${0##*/}" "-$opt"
-                            OPTRET=(--)
-                            return 1
-                        fi
-                    fi
-                done
-                ;;
-            --?*=*|--?*) # long option
-                IFS='=' read -r opt optarg <<< "${1#--}"
-                longoptmatch "$opt"
-                case $? in
-                    0)
-                        if [[ $optarg ]]; then
-                            printf "%s: option '--%s' doesn't allow an argument\n" "${0##*/}" "$opt"
-                            OPTRET=(--)
-                            return 1
-                        else
-                            OPTRET+=("--$opt")
-                        fi
-                        ;;
-                    1)
-                        # --longopt=optarg
-                        if [[ $optarg ]]; then
-                            OPTRET+=("--$opt" "$optarg")
-                        # --longopt optarg
-                        elif [[ $2 ]]; then
-                            OPTRET+=("--$opt" "$2" )
-                            shift
-                        else
-                            printf "%s: option '--%s' requires an argument\n" "${0##*/}" "$opt"
-                            OPTRET=(--)
-                            return 1
-                        fi
-                        ;;
-                    254)
-                        # ambiguous option -- error was reported for us by longoptmatch()
-                        OPTRET=(--)
-                        return 1
-                        ;;
-                    255)
-                        # parse failure
-                        printf "%s: unrecognized option '%s'\n" "${0##*/}" "--$opt"
-                        OPTRET=(--)
-                        return 1
-                        ;;
-                esac
-                ;;
-            *) # non-option arg encountered, add it as a parameter
-                unused_argv+=("$1")
-                ;;
-        esac
-        shift
-    done
+		*) # fail, ambiguous match
+			printf "%s: option '%s' is ambiguous; possibilities:%s\n" "${0##*/}" \
+			    "--$1" "$(printf " '%s'" "${longmatch[@]%:}")"
+			return 254
+			;;
+		esac
+	}
 
-    # add end-of-opt terminator and any leftover positional parameters
-    OPTRET+=('--' "${unused_argv[@]}" "$@")
-    unset longoptmatch
+	while (( $# )); do
+		case $1 in
+		--) # explicit end of options
+			shift
+			break
+			;;
+		-[!-]*) # short option
+			for (( i = 1; i < ${#1}; i++ )); do
+			opt=${1:i:1}
 
-    return 0
+			# option doesn't exist
+			if [[ $shortopts != *$opt* ]]; then
+				printf "%s: invalid option -- '%s'\n" "${0##*/}" "$opt"
+				OPTRET=(--)
+				return 1
+			fi
+
+			OPTRET+=("-$opt")
+			# option requires optarg
+			if [[ $shortopts = *$opt:* ]]; then
+				# if we're not at the end of the option chunk, the rest is the optarg
+				if (( i < ${#1} - 1 )); then
+					OPTRET+=("${1:i+1}")
+					break
+				# if we're at the end, grab the the next positional, if it exists
+				elif (( i == ${#1} - 1 )) && [[ $2 ]]; then
+					OPTRET+=("$2")
+					shift
+					break
+				# parse failure
+				else
+					printf "%s: option '%s' requires an argument\n" "${0##*/}" "-$opt"
+					OPTRET=(--)
+					return 1
+				fi
+			fi
+			done
+			;;
+		--?*=*|--?*) # long option
+			IFS='=' read -r opt optarg <<< "${1#--}"
+			longoptmatch "$opt"
+			case $? in
+			0)
+				if [[ $optarg ]]; then
+					printf "%s: option '--%s' doesn't allow an argument\n" "${0##*/}" "$opt"
+					OPTRET=(--)
+					return 1
+				else
+					OPTRET+=("--$opt")
+				fi
+				;;
+			1)
+				# --longopt=optarg
+				if [[ $optarg ]]; then
+					OPTRET+=("--$opt" "$optarg")
+				# --longopt optarg
+				elif [[ $2 ]]; then
+					OPTRET+=("--$opt" "$2" )
+					shift
+				else
+					printf "%s: option '--%s' requires an argument\n" "${0##*/}" "$opt"
+					OPTRET=(--)
+					return 1
+				fi
+				;;
+			254)
+				# ambiguous option -- error was reported for us by longoptmatch()
+				OPTRET=(--)
+				return 1
+				;;
+			255)
+				# parse failure
+				printf "%s: unrecognized option '%s'\n" "${0##*/}" "--$opt"
+				OPTRET=(--)
+				return 1
+				;;
+			esac
+			;;
+		*) # non-option arg encountered, add it as a parameter
+			unused_argv+=("$1")
+			;;
+		esac
+		shift
+	done
+
+	# add end-of-opt terminator and any leftover positional parameters
+	OPTRET+=('--' "${unused_argv[@]}" "$@")
+	unset longoptmatch
+
+	return 0
 }
 
 kver() {
-    # this is intentionally very loose. only ensure that we're
-    # dealing with some sort of string that starts with something
-    # resembling dotted decimal notation. remember that there's no
-    # requirement for CONFIG_LOCALVERSION to be set.
-    local kver re='^[[:digit:]]+(\.[[:digit:]]+)+'
+	# this is intentionally very loose. only ensure that we're
+	# dealing with some sort of string that starts with something
+	# resembling dotted decimal notation. remember that there's no
+	# requirement for CONFIG_LOCALVERSION to be set.
+	local kver re='^[[:digit:]]+(\.[[:digit:]]+)+'
 
-    # scrape the version out of the kernel image. locate the offset
-    # to the version string by reading 2 bytes out of image at at
-    # address 0x20E. this leads us to a string of, at most, 128 bytes.
-    # read the first word from this string as the kernel version.
-    local offset=$(hexdump -s 526 -n 2 -e '"%0d"' "$1")
-    [[ $offset = +([0-9]) ]] || return 1
+	# scrape the version out of the kernel image. locate the offset
+	# to the version string by reading 2 bytes out of image at at
+	# address 0x20E. this leads us to a string of, at most, 128 bytes.
+	# read the first word from this string as the kernel version.
+	local offset=$(hexdump -s 526 -n 2 -e '"%0d"' "$1")
+	[[ $offset = +([0-9]) ]] || return 1
 
-    read kver _ < \
-        <(dd if="$1" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+	read kver _ < \
+		<(dd if="$1" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
 
-    [[ $kver =~ $re ]] || return 1
+	[[ $kver =~ $re ]] || return 1
 
-    printf '%s' "$kver"
-}
-
-plain() {
-    local mesg=$1; shift
-    printf "    $_color_bold$mesg$_color_none\n" "$@" >&2
+	printf '%s' "$kver"
 }
 
 quiet() {
-    (( _optquiet )) || plain "$@"
+	(( _optquiet )) || msg2 "$@"
 }
 
 msg() {
-    local mesg=$1; shift
-    printf "$_color_green==>$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
+	printf "$1\n" "${@:2}" >&2
 }
 
 msg2() {
-    local mesg=$1; shift
-    printf "  $_color_blue->$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
+	printf "  $1\n" "${@:2}" >&2
+}
+
+msg3() {
+	printf "    $1\n" "${@:2}" >&2
+}
+
+msgul() {
+	printf "${_color_ul}$1${_color_none}\n" "${@:2}" >&2
+}
+
+msgbl() {
+	printf "${_color_bold}$1${_color_none} $2\n" "${@:3}" >&2
 }
 
 warning() {
-    local mesg=$1; shift
-    printf "$_color_yellow==> WARNING:$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
+	printf "warning: $1\n" "${@:2}" >&2
 }
 
 error() {
-    local mesg=$1; shift
-    printf "$_color_red==> ERROR:$_color_none $_color_bold$mesg$_color_none\n" "$@" >&2
-    return 1
+	printf "error: $1\n" "${@:2}" >&2
+	return 1
 }
 
 die() {
-    error "$@"
-    cleanup 1
+	error "$@"
+	cleanup 1
 }
 
+# map runs a function $1 for ${@:2}
 map() {
-    local r=0
-    for _ in "${@:2}"; do
-        "$1" "$_" || (( $# > 255 ? r=1 : ++r ))
-    done
-    return $r
+	local r=0
+	for _ in "${@:2}"; do
+		"$1" "$_" || (( $# > 255 ? r=1 : ++r ))
+	done
+	return $r
 }
 
+# arrayize_config turns all config variables into bash arrays.
 arrayize_config() {
-    set -f
-    [[ ${MODULES@a} != *a* ]] && MODULES=($MODULES)
-    [[ ${BINARIES@a} != *a* ]] && BINARIES=($BINARIES)
-    [[ ${FILES@a} != *a* ]] && FILES=($FILES)
-    [[ ${HOOKS@a} != *a* ]] && HOOKS=($HOOKS)
-    [[ ${COMPRESSION_OPTIONS@a} != *a* ]] && COMPRESSION_OPTIONS=($COMPRESSION_OPTIONS)
-    set +f
+	set -f
+	[[ ${MODULES@a} != *a* ]] && MODULES=($MODULES)
+	[[ ${BINARIES@a} != *a* ]] && BINARIES=($BINARIES)
+	[[ ${FILES@a} != *a* ]] && FILES=($FILES)
+	[[ ${HOOKS@a} != *a* ]] && HOOKS=($HOOKS)
+	[[ ${COMPRESSION_OPTIONS@a} != *a* ]] && COMPRESSION_OPTIONS=($COMPRESSION_OPTIONS)
+	set +f
 }
 
+# in_array searches ${@:2} for $1, returns true if found.
 in_array() {
-    # Search for an element in an array.
-    #   $1: needle
-    #   ${@:2}: haystack
+	local needle=$1; shift
+	local item
 
-    local item= needle=$1; shift
-
-    for item in "$@"; do
-        [[ $item = $needle ]] && return 0 # Found
-    done
-    return 1 # Not Found
+	for item in "$@"; do
+		[[ $item = $needle ]] && return 0
+	done
+	return 1
 }
 
+# index_of gets the array ${@:2} index of item $1 and sets the
+# global var _idx with the index, returns true if found.
 index_of() {
-    # get the array index of an item. sets the global var _idx with
-    # index and returns 0 if found, otherwise returns 1.
-    local item=$1; shift
+	local item=$1; shift
 
-    for (( _idx=1; _idx <= $#; _idx++ )); do
-        if [[ $item = ${!_idx} ]]; then
-            (( --_idx ))
-            return 0
-        fi
-    done
+	for (( _idx=1; _idx <= $#; _idx++ )); do
+		if [[ $item = ${!_idx} ]]; then
+			(( --_idx ))
+			return 0
+		fi
+	done
 
-    # not found
-    unset _idx
-    return 1
+	unset _idx
+	return 1
 }
 
+# funcgrep returns a list of all functions matching $1 from a file $2
 funcgrep() {
-    awk -v funcmatch="$1" '
-        /^[[:space:]]*[[:alnum:]_]+[[:space:]]*\([[:space:]]*\)/ {
-            match($1, funcmatch)
-            print substr($1, RSTART, RLENGTH)
-        }' "$2"
+	awk -v funcmatch="$1" '
+		/^[[:space:]]*[[:alnum:]_]+[[:space:]]*\([[:space:]]*\)/ {
+			match($1, funcmatch)
+			print substr($1, RSTART, RLENGTH)
+	}' "$2"
 }
 
-list_hookpoints() {
-    local funcs script
-
-    script=$(PATH=$_d_hooks type -P "$1") || return 0
-
-    mapfile -t funcs < <(funcgrep '^run_[[:alnum:]_]+' "$script")
-
-    echo
-    msg "This hook has runtime scripts:"
-    in_array run_earlyhook "${funcs[@]}" && msg2 "early hook"
-    in_array run_hook "${funcs[@]}" && msg2 "pre-mount hook"
-    in_array run_latehook "${funcs[@]}" && msg2 "post-mount hook"
-    in_array run_cleanuphook "${funcs[@]}" && msg2 "cleanup hook"
-}
-
-modprobe() {
-    command modprobe -d "$_optmoduleroot" -S "$KERNELVERSION" "$@"
-}
-
+# auto_modules performs auto detection of modules via sysfs.
 auto_modules() {
-    # Perform auto detection of modules via sysfs.
+	local -a mods
 
-    local mods=
+	mapfile -t mods < <(
+		find /sys/devices -name uevent -exec sort -u {} + | \
+			awk -F= '$1 == "MODALIAS" && !_[$0]++'
+	)
 
-    mapfile -t mods < <(find /sys/devices -name uevent \
-        -exec sort -u {} + | awk -F= '$1 == "MODALIAS" && !_[$0]++')
-    mapfile -t mods < <(modprobe -qaR "${mods[@]#MODALIAS=}")
+	mapfile -t mods < <(modprobe -qaR "${mods[@]#MODALIAS=}")
 
-    (( ${#mods[*]} )) && printf "%s\n" "${mods[@]//-/_}"
+	(( ${#mods[*]} )) && printf "%s\n" "${mods[@]//-/_}"
 }
 
+# all_modules returns a list of modules from patterns $@.
+# Use '-f' to filter found modules.
 all_modules() {
-    # Add modules to the initcpio, filtered by grep.
-    #   $@: filter arguments to grep
-    #   -f FILTER: ERE to filter found modules
+	local -i count
+	local -a filter
+	local mod OPTIND OPTARG
 
-    local -i count=0
-    local mod= OPTIND= OPTARG= filter=()
+	local am="$_d_workdir"/all.modules
 
-    while getopts ':f:' flag; do
-        case $flag in f) filter+=("$OPTARG") ;; esac
-    done
-    shift $(( OPTIND - 1 ))
+	while getopts ':f:' flag; do
+		case $flag in f) filter+=("$OPTARG") ;; esac
+	done
+	shift $(( OPTIND - 1 ))
 
-    [[ ! -f "$_d_workdir/all.modules" ]] && \
-        find "$_d_kmoduledir" -type f -name '*.ko*' -print0 2>/dev/null \
-            > "$_d_workdir/all.modules"
+	if [[ ! -f "$am" ]]; then
+		find "$_d_kmoduledir" \
+			-type f -name '*.ko*' -print0 2>/dev/null > "$am"
+	fi
 
-    while read -r -d '' mod; do
-        (( ++count ))
+	while read -r -d '' mod; do
+		(( count++ ))
 
-        for f in "${filter[@]}"; do
-            [[ $mod =~ $f ]] && continue 2
-        done
+		for f in "${filter[@]}"; do
+			[[ $mod =~ $f ]] && continue 2
+		done
 
-        mod=${mod##*/}
-        mod="${mod%.ko*}"
-        printf '%s\n' "${mod//-/_}"
-    done < <(grep -EZz "$@" "$_d_workdir/all.modules")
+		mod=${mod##*/}
+		mod="${mod%.ko*}"
+		printf '%s\n' "${mod//-/_}"
+	done < <(grep -EZz "$@" "$am")
 
-    (( count ))
+	(( count ))
 }
 
+# add_all_modules adds all modules $@ found by all_modules to the image.
 add_all_modules() {
-    # Add modules to the initcpio.
-    #   $@: arguments to all_modules
+	local -a mods
 
-    local mod mods
-
-    mapfile -t mods < <(all_modules "$@")
-    map add_module "${mods[@]}"
-
-    return $(( !${#mods[*]} ))
+	mapfile -t mods < <(all_modules "$@")
+	map add_module "${mods[@]}"
 }
 
+# add_checked_modules is the same as add_all_modules except the modules are
+# filtered to autodetected modules, if there are no autodetected modules
+# this is equivalent to add_all_modules.
 add_checked_modules() {
-    # Add modules to the initcpio, filtered by the list of autodetected
-    # modules.
-    #   $@: arguments to all_modules
+	local -a mods
 
-    local mod mods
+	if (( ${#_autodetect_cache[*]} )); then
+		mapfile -t mods < <(all_modules "$@" | \
+			grep -xFf <(printf '%s\n' "${!_autodetect_cache[@]}"))
+	else
+		mapfile -t mods < <(all_modules "$@")
+	fi
 
-    if (( ${#_autodetect_cache[*]} )); then
-        mapfile -t mods < <(all_modules "$@" | grep -xFf <(printf '%s\n' "${!_autodetect_cache[@]}"))
-    else
-        mapfile -t mods < <(all_modules "$@")
-    fi
-
-    map add_module "${mods[@]}"
+	map add_module "${mods[@]}"
 }
 
+# add_firmware adds all firmware $@ found in _d_firmware to the image.
 add_firmware() {
-    # add a firmware file to the image.
-    #   $1: firmware path fragment
+	local r=1
 
-    local fw fwpath r=1
+	for fw in "$@"; do
+		for fwpath in "${_d_firmware[@]}"; do
+			[[ -f $fwpath/$fw ]] || continue
+			add "f $fwpath/$fw"; r=0
+			break
+		done
+	done
 
-    for fw; do
-        for fwpath in "${_d_firmware[@]}"; do
-            if [[ -f $fwpath/$fw ]]; then
-                add_afile "$fwpath/$fw" "$fwpath/$fw" 644 && r=0
-                break
-            fi
-        done
-    done
-
-    return $r
+	return $r
 }
 
+# add_module adds a kernel module $1 and all it's dependencies and firmware
+# to the image. ?-suffix ignores errors.
 add_module() {
-    # Add a kernel module to the initcpio image. Dependencies will be
-    # discovered and added.
-    #   $1: module name
+	local target module softdeps deps field value
+	local -a firmware
+	local -i ign_errors found
 
-    local target= module= softdeps= deps= field= value= firmware=()
-    local ign_errors=0 found=0
+	[[ $KERNELVERSION == none ]] && return 0
 
-    [[ $KERNELVERSION == none ]] && return 0
+	if [[ $1 = *\? ]]; then
+		ign_errors=1
+		set -- "${1%?}"
+	fi
 
-    if [[ $1 = *\? ]]; then
-        ign_errors=1
-        set -- "${1%?}"
-    fi
+	target=${1%.ko*} target=${target//-/_}
 
-    target=${1%.ko*} target=${target//-/_}
+	# skip expensive stuff if this module has already been added
+	(( _addedmodules["$target"] == 1 )) && return
 
-    # skip expensive stuff if this module has already been added
-    (( _addedmodules["$target"] == 1 )) && return
+	while IFS=':= ' read -r -d '' field value; do
+		case "$field" in
+		filename)
+			found=1
+			module=${value##*/} module=${module%.ko*}
+			quiet "adding module: %s" "$module"
+			_modpaths["$value"]=1
+			_addedmodules["${module//-/_}"]=1
+			;;
+		depends)
+			IFS=',' read -r -a deps <<< "$value"
+			map add_module "${deps[@]}"
+			;;
+		firmware)
+			firmware+=("$value")
+			;;
+		softdep)
+			read -ra softdeps <<<"$value"
+			for module in "${softdeps[@]}"; do
+			[[ $module == *: ]] && continue
+			add_module "$module?"
+			done
+			;;
+		esac
+	done < <(modinfo -b "$_optmoduleroot" -k "$KERNELVERSION" -0 "$target" 2>/dev/null)
 
-    while IFS=':= ' read -r -d '' field value; do
-        case "$field" in
-            filename)
-                found=1
-                module=${value##*/} module=${module%.ko*}
-                quiet "adding module: %s" "$module"
-                _modpaths["$value"]=1
-                _addedmodules["${module//-/_}"]=1
-                ;;
-            depends)
-                IFS=',' read -r -a deps <<< "$value"
-                map add_module "${deps[@]}"
-                ;;
-            firmware)
-                firmware+=("$value")
-                ;;
-            softdep)
-                read -ra softdeps <<<"$value"
-                for module in "${softdeps[@]}"; do
-                    [[ $module == *: ]] && continue
-                    add_module "$module?"
-                done
-                ;;
-        esac
-    done < <(modinfo -b "$_optmoduleroot" -k "$KERNELVERSION" -0 "$target" 2>/dev/null)
+	if (( !found )); then
+		(( ign_errors || _addedmodules["$target"] )) && return 0
+		error "module not found: '%s'" "$target"
+		return 1
+	fi
 
-    if (( !found )); then
-        (( ign_errors || _addedmodules["$target"] )) && return 0
-        error "module not found: \`%s'" "$target"
-        return 1
-    fi
+	# XXX: reduce spam, errors at the end of all modules
+	if (( ${#firmware[*]} )); then
+		add_firmware "${firmware[@]}" ||
+			warning 'Possibly missing firmware for module: %s' "$target"
+	fi
 
-    if (( ${#firmware[*]} )); then
-        add_firmware "${firmware[@]}" ||
-            warning 'Possibly missing firmware for module: %s' "$target"
-    fi
-
-    # handle module quirks
-    case $target in
-        fat)
-            add_module "nls_cp437?"
-            add_module "nls_iso8859-1?"
-            ;;
-        ocfs2)
-            add_module "configfs?"
-            ;;
-        btrfs)
-            add_module "libcrc32c?"
-            ;;
-        f2fs)
-            add_module "crypto-crc32?"
-            ;;
-        ext4)
-            add_module "crypto-crc32c?"
-            ;;
-    esac
+	# handle module quirks
+	case $target in
+	fat)
+		add_module "nls_cp437?"
+		add_module "nls_iso8859-1?"
+		;;
+	ocfs2)
+		add_module "configfs?"
+		;;
+	btrfs)
+		add_module "libcrc32c?"
+		;;
+	f2fs)
+		add_module "crypto-crc32?"
+		;;
+	ext4)
+		add_module "crypto-crc32c?"
+		;;
+	esac
 }
 
 addf() {
-    if (( $# )); then
-        printf "$@" >> "$BUILDARCHIVE"
-    else
-        cat - >> "$BUILDARCHIVE"
-    fi
+	if (( $# )); then
+		printf "$@" >> "$BUILDARCHIVE"
+	else
+		cat - >> "$BUILDARCHIVE"
+	fi
 }
 
 add() {
-    if (( $# )); then
-        printf '%s\n' "$@" >> "$BUILDARCHIVE"
-    else
-        cat - >> "$BUILDARCHIVE"
-    fi
+	if (( $# )); then
+		printf '%s\n' "$@" >> "$BUILDARCHIVE"
+	else
+		cat - >> "$BUILDARCHIVE"
+	fi
 }
 
 add_full_dir() {
-    add "Rr $1 $1 0 0"
-}
-
-add_dir() {
-    add "d $1 $2"
+	add "Rr $1 $1 0 0"
 }
 
 add_symlink() {
-    p="${1##$_optrootfs}"
-    pl="$(readlink -f $1)"
-    pl="${pl##$_optrootfs}"
-    add "l ${2:-$pl} $p"
+	p="${1##$_optrootfs}"
+	pl="$(readlink -f $1)"
+	pl="${pl##$_optrootfs}"
+	add "l ${2:-$pl} $p"
 }
 
 add_file() {
-    p="${1##$_optrootfs}"
-    add "fr $p $2 $3"
+	p="${1##$_optrootfs}"
+	add "fr $p $2 $3"
 }
 
 add_afile() {
-    add "f $1 $2 $3"
+	add "f $1 $2 $3"
 }
 
+# add_runscript adds the runtime script for the calling hook to the image.
 add_runscript() {
-    # Adds a runtime script to the initcpio image. The name is derived from the
-    # script which calls it as the basename of the caller.
+	local funcs fn script hookname
+	hookname=${BASH_SOURCE[1]%%/build}
+	hookname=${hookname##*/}
 
-    local funcs fn script hookname
-    hookname=${BASH_SOURCE[1]%%/build}
-    hookname=${hookname##*/}
+	if ! script=$(PATH=$_d_hooks type -P "$hookname"); then
+		error 'missing runtime script for: %s' "$hookname"
+		return
+	fi
 
-    if ! script=$(PATH=$_d_hooks type -P "$hookname"); then
-        error "runtime script for \`%s' not found" "$hookname"
-        return
-    fi
+	add "f $script /hooks/$hookname 0755"
 
-    add_afile "$script" "/hooks/$hookname" 755
+	mapfile -t funcs < <(funcgrep '^run_[[:alnum:]_]+' "$script")
 
-    mapfile -t funcs < <(funcgrep '^run_[[:alnum:]_]+' "$script")
-
-    for fn in "${funcs[@]}"; do
-        case $fn in
-            run_earlyhook)
-                _runhooks['early']+=" $hookname"
-                ;;
-            run_hook)
-                _runhooks['hooks']+=" $hookname"
-                ;;
-            run_latehook)
-                _runhooks['late']+=" $hookname"
-                ;;
-            run_cleanuphook)
-                _runhooks['cleanup']="$hookname ${_runhooks['cleanup']}"
-                ;;
-        esac
-    done
+	for fn in "${funcs[@]}"; do
+		case $fn in
+		run_earlyhook)
+			_runhooks['early']+=" $hookname"
+			;;
+		run_hook)
+			_runhooks['hooks']+=" $hookname"
+			;;
+		run_latehook)
+			_runhooks['late']+=" $hookname"
+			;;
+		run_cleanuphook)
+			_runhooks['cleanup']="$hookname ${_runhooks['cleanup']}"
+			;;
+		esac
+	done
 }
 
+# add_binary includes binary $1 and it's dependencies to the image.
+# optional destination $2.
 add_binary() {
-    # Add a binary file to the initcpio image. library dependencies will
-    # be discovered and added.
-    #   $1: path to binary
-    #   $2: destination on initcpio (optional, defaults to same as source)
+	local src dst binary
 
-    local binary= rbinary=
+	if [[ ${1:0:1} != '/' ]]; then
+		src=$(PATH=$RPATH type -P "$1")
+	else
+		src=$1
+	fi
 
-    if [[ ${1:0:1} != '/' ]]; then
-        binary=$(PATH=$RPATH type -P "$1")
-    else
-        binary=$1
-    fi
+	if [[ ! -n $src ]]; then
+		error 'failed to add binary: %s' "$1"
+		return 1
+	fi
 
-    if [[ ! -n $binary ]]; then
-        error "empty binary: $script"
-        return 1
-    fi
+	binary="${src##$_optrootfs}"
 
-    rbinary="${binary##$_optrootfs}"
+	dst=${2:-$binary}
+	dst=${dst/\/sbin\//\/bin\/}
 
-    dest=${2:-$binary}
-    dest=${dest/\/sbin\//\/bin\/}
-
-    if [[ "$(head -c1 $binary)" != "#" ]]; then
-        add "L $rbinary $dest"
-    else
-        add "fr $rbinary $dest 0755"
-    fi
+	if [[ "$(head -c1 $src)" != "#" ]]; then
+		add "L $binary $dst"
+	else
+		add "fr $binary $dst 0755"
+	fi
 }
 
-parse_config() {
-	# parse key global variables set by the config file.
-	local config="$1"
-
+# load_config adds all modules, binaries, files and the config into the image,
+# and embeds version information for archivegen and mkinitcpio.
+load_config() {
 	map add_module "${MODULES[@]}"
 	map add_binary "${BINARIES[@]}"
 	map add_file "${FILES[@]}"
 
 	add <<-?
+	f $1 buildconfig - 0 0
+
 	c version - - - <<!
 	archivegen: $(archivegen -version)
 	mkinitcpio: $version
 	!
 	?
 
-	add "f $config buildconfig - 0 0"
-
 	# When MODULES is not an array (but instead implicitly converted at
 	# startup), sourcing the config causes the string value of MODULES
 	# to be assigned as MODULES[0]. Avoid this by explicitly unsetting
 	# MODULES before re-sourcing the config.
 	unset MODULES
-	source "$config"
+	source "$1"
 
 	# arrayize MODULES if necessary.
-	[[ ${MODULES@a} != *a* ]] && read -ra MODULES <<<"${MODULES//-/_}"
+	[[ ${MODULES@a} != *a* ]] && read -r -a MODULES <<<"${MODULES//-/_}"
 
 	for mod in "${MODULES[@]%\?}"; do
 		mod=${mod//-/_}
@@ -572,10 +546,13 @@ parse_config() {
 		(( _addedmodules["$mod"] == 1 )) && add+=("$mod")
 	done
 
-	add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
-	addf '%s\n' "${add[@]}"
-	add  '!'
+	if (( ${#add[*]} )); then
+		add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
+		addf '%s\n' "${add[@]}"
+		add  '!'
+	fi
 
+	# /config is only used by the included init.
 	(( systemd )) && return
 
 	add <<-?
@@ -588,112 +565,114 @@ parse_config() {
 	?
 }
 
-run_build_hook() {
-    local hook=$1 script= resolved= paths= idir=
-    local MODULES=() BINARIES=() FILES=() SCRIPT=
+find_script() {
+	local script=$1
+	local -a paths
 
-    shopt -s nullglob
-    declare -a scripts
-
-    IFS=':' read -ra paths <<< "$_d_install"
-    for x in "${paths[@]}"; do
-	    [[ ! -e "$x/$hook" ]] && continue
-	    script="$x/$hook"
-	    idir="$x"
-	    break
-    done
-
-    if [[ ! "$script" ]]; then
-        error "Hook '$hook' cannot be found"
-        return 1
-    fi
-
-    # check for deprecation
-    if resolved=$(readlink -f "$script") && [[ ${script##*/} != "${resolved##*/}" ]]; then
-        warning "Hook '%s' is deprecated. Replace it with '%s' in your config" \
-            "${script##*/}" "${resolved##*/}"
-        script=$resolved
-    fi
-
-    if [[ ! -d "$script" ]]; then
-	    scripts=("$script")
-    else
-	    scripts=("$script"/?(build|*.archive))
-    fi
-
-    if ! (( ${#scripts[@]} )); then
-	    error 'No scripts found in %s' "$script"
-    fi
-
-    OPWD="$PWD"
-    cd "$(dirname ${scripts[0]})"
-    for x in "${scripts[@]}"; do
-	case "$x" in
-	*.archive)
-		msg2 "archive: %s" "${x##$idir/}"
-		add < "$x"
-		continue
-		;;
-	esac
-
-	[[ -d "$x" ]] && continue
-
-	# source
-	unset -f build
-	if ! . "$x"; then
-	    error 'Failed to read %s' "$x"
-	    return 1
-	fi
-
-	if ! declare -f build >/dev/null; then
-	    error 'Hook '$x' has no build function'
-	    return 1
-	fi
-
-	# run
-	if (( _optquiet )); then
-	    msg2 "build:   %s" "${x##$idir/}"
-	else
-	    msg2 "build:   %s" "$x"
-	fi
-
-	if ! build; then
-	    error "$x"
-	fi
-    done
-    cd "$OPWD"
+	IFS=':' read -ra paths <<< "$_d_install"
+	for path in "${paths[@]}"; do
+		[[ ! -e "$path/$script" ]] && continue
+		printf '%s\n' "$path/$script"
+		return 0
+	done
+	return 1
 }
 
-try_enable_color() {
-    local colors
+run_build_hook() {
+	local hook=$1 script resolved
+	local -a scripts
+	shopt -s nullglob
 
-    if ! colors=$(tput colors 2>/dev/null); then
-        warning "Failed to enable color. Check your TERM environment variable"
-        return
-    fi
+	if ! script=$(find_script $hook); then
+		error 'no such hook: %s' "$hook"
+		return 1
+	fi
 
-    if (( colors > 0 )) && tput setaf 0 &>/dev/null; then
-        _color_none=$(tput sgr0)
-        _color_bold=$(tput bold)
-        _color_blue=$_color_bold$(tput setaf 4)
-        _color_green=$_color_bold$(tput setaf 2)
-        _color_red=$_color_bold$(tput setaf 1)
-        _color_yellow=$_color_bold$(tput setaf 3)
-    fi
+	# deprecated hooks are symlinks to the replacement
+	resolved=$(realpath "$script")
+	if [[ "$script" != "$resolved" ]]; then
+		warning "'%s' hook has been deprecated by '%s'" "$hook" "${resolved##*/}"
+		script=$resolved
+	fi
+
+	# hooks can be directories containing a build hook and .archive files
+	# which are automatically added to the image.
+	if [[ ! -d "$script" ]]; then
+		scripts=("$script")
+	else
+		scripts=("$script"/?(build|*.archive))
+	fi
+
+	if ! (( ${#scripts[*]} )); then
+		error 'empty hook directory: %s' "$hook"
+		return 1
+	fi
+
+	OPWD="$PWD"
+	cd "$(dirname ${scripts[0]})"
+
+	for x in "${scripts[@]}"; do
+		[[ -d "$x" ]] && continue
+
+		if [[ -d "$script" ]]; then
+			msg "%s/%s" "$hook" "${x##*/}"
+		else
+			msg "%s" "$hook"
+		fi
+
+		case "$x" in
+		*.archive)
+			add < "$x"
+			continue
+			;;
+		esac
+
+		unset -f build
+		if ! source "$x"; then
+			return 1
+		fi
+
+		if ! declare -f build >/dev/null; then
+			error 'build function missing: %s' "$hook"
+			return 1
+		fi
+
+		if ! build; then
+			error 'build function failed: %s' "$hook"
+		fi
+	done
+
+	shopt -u nullglob
+	cd "$OPWD"
 }
 
 install_modules() {
-    local moduledest=$BUILDROOT/usr/lib/modules/$KERNELVERSION
+	[[ $KERNELVERSION == none ]] && return 0
 
-    [[ $KERNELVERSION == none ]] && return 0
+	if (( $# == 0 )); then
+		warning "image does not include any kernel modules!"
+		return 0
+	fi
 
-    if (( $# == 0 )); then
-        warning "No modules were added to the image. This is probably not what you want."
-        return 0
-    fi
-
-    add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} usr 0 0"
-    addf 'f /usr%s\n' "$@"
+	add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} usr 0 0"
+	addf 'f /usr%s\n' "$@"
 }
 
-# vim: set ft=sh ts=4 sw=4 et:
+try_enable_color() {
+	local colors
+
+	if ! colors=$(tput colors 2>/dev/null); then
+		warning "Failed to enable color. Check your TERM environment variable"
+		return
+	fi
+
+	if (( colors > 0 )) && tput setaf 0 &>/dev/null; then
+		_color_none=$(tput sgr0)
+		_color_bold=$(tput bold)
+		_color_blue=$_color_bold$(tput setaf 4)
+		_color_green=$_color_bold$(tput setaf 2)
+		_color_red=$_color_bold$(tput setaf 1)
+		_color_yellow=$_color_bold$(tput setaf 3)
+		_color_ul=$(tput smul)
+	fi
+}
