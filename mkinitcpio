@@ -11,7 +11,7 @@ _d_install=/etc/mkinitcpio/install:/usr/lib/mkinitcpio/install
 _d_firmware=(/usr/lib/firmware{,/updates})
 
 declare _optrootfs _optmoduleroot _optgenimg _optcompress
-declare -a _hooks _opthooks _optskiphooks _optaddhooks
+declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
@@ -429,6 +429,7 @@ fi
 
 map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
 (( ${#_binaries[@]} )) && addf 'L %s\n' "${!_binaries[@]}"
+(( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
 
 load_config "$_f_config"
 

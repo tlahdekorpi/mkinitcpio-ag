@@ -390,10 +390,8 @@ add_module() {
 		return 1
 	fi
 
-	# XXX: reduce spam, errors at the end of all modules
 	if (( ${#firmware[*]} )); then
-		add_firmware "${firmware[@]}" ||
-			warning 'Possibly missing firmware for module: %s' "$target"
+		add_firmware "${firmware[@]}" || _fwerrors+=("$target")
 	fi
 
 	# handle module quirks
