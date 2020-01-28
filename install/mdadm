@@ -1,0 +1,22 @@
+#!/bin/bash
+build() {
+	add_checked_modules -f 'dm-' 'drivers/md/*'
+	if grep -qw ^ARRAY /etc/mdadm.conf &> /dev/null; then
+		msg3 'using etc/mdadm.conf'
+		add 'f /etc/mdadm.conf'
+	fi
+
+	add <<-!
+	L /usr/sbin/mdadm usr/bin/mdadm
+
+	fr /usr/lib/udev/rules.d/{
+		63-md-raid-arrays.rules
+		64-md-raid-assembly.rules
+	}
+	!
+}
+
+help() { cat <<!
+mdraid modules and mdadm.
+!
+}
