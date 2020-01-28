@@ -30,7 +30,7 @@ _optcompress=
 _optshowautomods=0 _optsavetree=0 _optshowmods=0 _optarchive=0 _optstdout=0
 _optquiet=1 _optcolor=1
 _optskiphooks=() _optaddhooks=() _hooks=()
-declare -A _runhooks _addedmodules _modpaths _autodetect_cache
+declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 
 systemd=0
 
@@ -452,6 +452,7 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 fi
 
 map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
+(( ${#_binaries[@]} )) && addf 'L %s\n' "${!_binaries[@]}"
 
 # process config file
 parse_config "$_f_config"

@@ -37,7 +37,7 @@ add_udev_rule() {
 				if [[ ${binary:0:1} != '/' ]]; then
 					binary=$(PATH="$_optrootfs"/usr/lib/udev type -P "$binary")
 				fi
-				add_binary "$binary"
+				_binaries["$binary"]=1
 				;;
 			esac
 		done
@@ -70,7 +70,7 @@ add_systemd_unit() {
 		Exec*)
 			# don't add binaries unless they are required
 			if [[ ${values[0]:0:1} != '-' ]]; then
-				add_binary "${values[0]}"
+				_binaries["${values[0]}"]=1
 			fi
 			;;
 		esac
