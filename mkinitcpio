@@ -79,7 +79,7 @@ cleanup() {
 
 	if (( _optsavetree )); then
 		printf '%s\n' "${!_autodetect_cache[@]}" > "$_d_workdir/autodetect_modules"
-		msg "%s" "$_d_workdir"
+		msgq "%s" "$_d_workdir"
 	else
 		rm -rf "$_d_workdir"
 	fi

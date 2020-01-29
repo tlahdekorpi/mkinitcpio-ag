@@ -166,6 +166,10 @@ msg() {
 	(( ! _optquiet )) || printf "$1\n" "${@:2}" >&2
 }
 
+msgq() {
+	printf "$1\n" "${@:2}" >&2
+}
+
 msg2() {
 	(( ! _optquiet )) || printf "  $1\n" "${@:2}" >&2
 }
