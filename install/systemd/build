@@ -69,8 +69,12 @@ add_systemd_unit() {
 			;;
 		Exec*)
 			# don't add binaries unless they are required
-			if [[ ${values[0]:0:1} != '-' ]]; then
-				_binaries["${values[0]##$_optrootfs}"]=1
+			if ! [[ ${values[0]:0:1} != '-' ]]; then
+				continue
+			fi
+
+			if ! [[ "${values[0]}" =~ ^(/usr|)/bin/sh$ ]]; then
+				_binaries["${values[0]}"]=1
 			fi
 			;;
 		esac
@@ -132,6 +136,7 @@ build() {
 		systemd-fstab-generator
 		systemd-gpt-auto-generator
 		systemd-hibernate-resume-generator
+		systemd-debug-generator
 	}
 
 	L /usr/lib/systemd/{
@@ -155,6 +160,8 @@ build() {
 	map add_udev_rule "${rules[@]}"
 
 	local units=(
+		debug-shell.service
+
 		kmod-static-nodes.service
 		systemd-fsck@.service
 		systemd-hibernate-resume@.service
@@ -167,6 +174,7 @@ build() {
 		systemd-udevd-control.socket
 		systemd-udevd-kernel.socket
 		systemd-udevd.service
+		systemd-volatile-root.service
 
 		initrd-cleanup.service
 		initrd-fs.target
