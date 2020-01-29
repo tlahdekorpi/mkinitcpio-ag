@@ -73,8 +73,9 @@ add_systemd_unit() {
 				continue
 			fi
 
-			if ! [[ "${values[0]}" =~ ^(/usr|)/bin/sh$ ]]; then
-				_binaries["${values[0]}"]=1
+			binary="${values[0]##+(@|-|+|\!)}"
+			if ! [[ "$binary" =~ ^(/usr|)/bin/sh$ ]]; then
+				_binaries["$binary"]=1
 			fi
 			;;
 		esac
