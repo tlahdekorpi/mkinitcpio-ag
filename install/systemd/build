@@ -104,52 +104,7 @@ add_systemd_drop_in() {
 
 build() {
 	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
-
-	add <<-!
-	l usr/{sbin,bin,lib} /
-	l bin usr/sbin
-
-	# sd-units check if this exists
-	c etc/initrd-release
-
-	# fsck
-	l ../proc/self/mounts etc/mtab
-
-	L /usr/sbin/{
-		blkid
-		busybox
-		sulogin
-		switch_root
-	} usr/bin
-
-	L /usr/bin/{
-		mount,umount
-		kmod
-	}
-	l kmod usr/bin/{dep,ins,rm,ls}mod
-	l kmod usr/bin/mod{probe,info}
-
-	L /usr/bin/{systemd-tmpfiles,journalctl}
-
-	l /usr/lib/systemd/systemd init
-
-	L /usr/lib/systemd/system-generators/{
-		systemd-fstab-generator
-		systemd-gpt-auto-generator
-		systemd-hibernate-resume-generator
-		systemd-debug-generator
-	}
-
-	L /usr/lib/systemd/{
-		systemd
-		systemd-hibernate-resume
-		systemd-shutdown
-		systemd-sulogin-shell
-	}
-
-	l initrd.target usr/lib/systemd/system/default.target
-	l reboot.target usr/lib/systemd/system/ctrl-alt-del.target
-	!
+	add 'L /usr/sbin/busybox usr/bin/busybox'
 
 	local rules=(
 		50-udev-default.rules
@@ -199,14 +154,6 @@ build() {
 		timers.target
 	)
 	map add_systemd_unit "${units[@]}"
-
-	add <<-!
-	L /usr/lib64/libnss_files.so.2
-
-	c etc/passwd - - - root:x:0:0:root:/:/usr/bin/sh
-	c etc/group  - - - root:x:0:root
-	c etc/shadow - - - root::::::::
-	!
 
 	add_systemd_drop_in systemd-udevd.service resolve-names <<-!
 	[Service]
