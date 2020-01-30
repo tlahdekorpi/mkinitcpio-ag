@@ -602,7 +602,7 @@ run_build_hook() {
 	if [[ ! -d "$script" ]]; then
 		scripts=("$script")
 	else
-		scripts=("$script"/?(build|*.archive))
+		scripts=("$script"/?(build) "$script"/*.archive)
 	fi
 
 	if ! (( ${#scripts[*]} )); then
@@ -641,6 +641,7 @@ run_build_hook() {
 
 		if ! build; then
 			error 'build function failed: %s' "$hook"
+			break
 		fi
 	done
 
