@@ -1,0 +1,19 @@
+#!/bin/bash
+build() {
+	(( systemd )) && return 1
+	systemd=1
+
+	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
+
+	add <<-!
+	L /usr/sbin/busybox usr/bin/busybox
+	f $PWD/../systemd/{break,sysroot}-generator usr/lib/systemd/system-generators 0755
+	!
+}
+
+help() { cat <<!
+Include systemd directly from built sources
+# cd github.com/systemd/systemd; ninja -C build
+# mkinitcpio -o systemd-git -X systemd=\$PWD > out
+!
+}

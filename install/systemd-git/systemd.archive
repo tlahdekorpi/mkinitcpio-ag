@@ -1,0 +1,109 @@
+$ systemd /home/user/x/github.com/systemd/systemd
+$ build $systemd/build
+$ units $systemd/units
+$ rules $systemd/rules.d
+
+$ name systemd
+
+c etc/hostname - - - $name
+c etc/initrd-release
+
+l usr/{sbin,bin,lib} /
+l bin usr/sbin
+
+# fsck
+l ../proc/self/mounts etc/mtab
+
+# var-run-bad
+l ../run var/run
+
+L /usr/sbin/{blkid,sulogin} usr/bin
+
+L /usr/bin/{mount,umount,kmod}
+l kmod usr/bin/{dep,ins,rm,ls}mod
+l kmod usr/bin/mod{probe,info}
+
+L /usr/lib64/libnss_files.so.2
+c etc/passwd - - - root:x:0:0:root:/:/bin/sh
+c etc/group  - - - root:x:0:root
+c etc/shadow - - - root::::::::
+
+mr - $build usr/lib/systemd
+mr - $units usr/lib/systemd/system
+
+# run directly from /init the rpath $ORIGIN is not used for looking up libraries (bug?)
+# however executing systemd indirectly using ld.so works
+c init 0755 - - <<!
+#!/usr/bin/sh
+exec /lib64/ld-linux-x86-64.so.2 /usr/lib/systemd/systemd
+!
+
+mm - . - 0 0
+
+LA $build/src/udev/{scsi,ata}_id usr/lib/udev
+LA $build/systemd-{
+	hibernate-resume,gpt-auto,fstab,debug
+}-generator usr/lib/systemd/system-generators
+l ../src usr/lib/systemd/system-generators/src
+
+LA $build/{
+	udevadm
+	systemctl
+	journalctl
+	systemd
+	systemd-fsck
+	systemd-hibernate-resume
+	systemd-journald
+	systemd-modules-load
+	systemd-shutdown
+	systemd-sulogin-shell
+	systemd-sysctl
+	systemd-tmpfiles
+	systemd-udevd
+	systemd-volatile-root
+	systemd-vconsole-setup
+	systemd-hwdb
+}
+
+l ../lib/systemd/{
+	udevadm
+	systemctl
+	journalctl
+	systemd-tmpfiles
+	systemd-hwdb
+} usr/bin
+
+l ../{
+	systemd-udevd-kernel
+	systemd-udevd-control
+	systemd-journald-dev-log
+	systemd-journald-audit
+	systemd-journald
+}.socket usr/lib/systemd/system/sockets.target.wants
+
+l ../{
+	systemd-udevd
+	systemd-udev-trigger
+	systemd-tmpfiles-setup-dev
+	systemd-modules-load
+	systemd-journald
+	kmod-static-nodes
+}.service usr/lib/systemd/system/sysinit.target.wants
+
+c etc/systemd/system/systemd-udevd.service.d/resolve-names.conf - - - <<!
+[Service]
+ExecStart=
+ExecStart=/usr/lib/systemd/systemd-udevd --resolve-names=never
+!
+
+l initrd.target usr/lib/systemd/system/default.target
+
+g $units/*.{target,socket,service} -
+
+mr - units system
+g $build/units/*.service -
+
+mr - .*rules.d/ usr/lib/udev/rules.d/
+g {$rules,$build/rules.d}/*.rules -
+
+mc
