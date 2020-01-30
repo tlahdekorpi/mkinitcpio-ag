@@ -215,7 +215,7 @@ build() {
 	!
 
 	add <<-!
-	f $PWD/break-generator usr/lib/systemd/system-generators/break-generator 0755
+	f $PWD/{break,sysroot}-generator usr/lib/systemd/system-generators 0755
 	!
 }
 
