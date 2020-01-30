@@ -11,7 +11,7 @@ _d_install=/etc/mkinitcpio/install:/usr/lib/mkinitcpio/install
 _d_firmware=(/usr/lib/firmware{,/updates})
 
 declare _optrootfs _optmoduleroot _optgenimg _optcompress
-declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors
+declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
@@ -61,6 +61,7 @@ Options:
   -s --save              Save the build directory
   -z --compress PROGRAM  Compress image with PROGRAM
   -k --kernel VERSION    Use kernel VERSION
+  -X KEY=VALUE           Variable used by archivegen
 !
 }
 
@@ -227,7 +228,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dfhH:o:k:Lr:nR:sS:vVg:
+_opt_short=A:aMz:c:dfhH:o:k:Lr:nR:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -339,6 +340,10 @@ while :; do
 		shift
 		_optmoduleroot=$1
 		;;
+	-X)
+		shift
+		_optvars+=(-X "$1")
+		;;
 	--)
 		shift
 		break 2
@@ -445,6 +450,7 @@ set +o functrace
 set +o errtrace
 trap -- ERR
 
+ARCHIVEGEN_OPTIONS+=("${_optvars[@]}")
 
 if (( $_optarchive )); then
 	archivegen -rootfs "$_optrootfs" -print -elf.expand \
