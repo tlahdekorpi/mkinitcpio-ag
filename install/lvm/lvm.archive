@@ -1,0 +1,84 @@
+gr /etc/lvm/lvm.conf - 0 0
+
+c usr/lib/udev/rules.d/11-dm-db_persist.rules - - - <<!
+# <http://git.kernel.org/?p=boot/dracut/dracut.git;a=commitdiff;h=12b9736228f2b34c15a9cb63be79cf7b6e865b54>
+SUBSYSTEM=="block", KERNEL=="dm-[0-9]*", ACTION=="add|change", OPTIONS="db_persist"
+!
+
+fr /usr/lib/udev/rules.d/{
+	10-dm.rules
+	11-dm-lvm.rules
+	13-dm-disk.rules
+	95-dm-notify.rules
+	69-dm-lvm-metad.rules
+}
+
+L /usr/sbin/{
+	dmsetup
+	pdata_tools
+	lvm
+} usr/bin
+
+l pdata_tools usr/bin/{
+	cache_check
+	cache_dump
+	cache_metadata_size
+	cache_repair
+	cache_restore
+	cache_writeback
+	thin_check
+	thin_delta
+	thin_dump
+	thin_ls
+	thin_metadata_size
+	thin_repair
+	thin_restore
+	thin_rmap
+	thin_trim
+}
+
+l lvm usr/bin/{
+	lvchange
+	lvconvert
+	lvcreate
+	lvdisplay
+	lvextend
+	lvmconfig
+	lvmdiskscan
+	lvmsadc
+	lvmsar
+	lvreduce
+	lvremove
+	lvrename
+	lvresize
+	lvs
+	lvscan
+	pvchange
+	pvck
+	pvcreate
+	pvdisplay
+	pvmove
+	pvremove
+	pvresize
+	pvs
+	pvscan
+	vgcfgbackup
+	vgcfgrestore
+	vgchange
+	vgck
+	vgconvert
+	vgcreate
+	vgdisplay
+	vgexport
+	vgextend
+	vgimport
+	vgimportclone
+	vgmerge
+	vgmknodes
+	vgreduce
+	vgremove
+	vgrename
+	vgs
+	vgscan
+	vgsplit
+}

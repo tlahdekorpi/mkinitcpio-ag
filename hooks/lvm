@@ -1,0 +1,27 @@
+#!/bin/sh --
+run_earlyhook() {
+	# blame lvm
+	sed -i \
+		-e '/^ACTION!="add|change", GOTO="lvm_end"$/ s/add|change/add/' \
+		-e '/^GOTO/ s/systemd_background/direct_pvscan/' \
+		/usr/lib/udev/rules.d/69-dm-lvm-metad.rules
+
+	type lvmetad > /dev/null || return
+	mkdir /run/lvm; lvmetad -p /run/lvmetad.pid
+}
+
+run_cleanuphook() {
+	[[ -f /run/lvmetad.pid ]] || return
+	read pid < /run/lvmetad.pid; kill $pid
+}
+
+# We are suffering a race condition in non-systemd initramfs: If lvmetad is
+# killed before pvscan processes finish we have stale processes and
+# uninitialized physical volumes. So wait for pvscan processes to finish.
+# Break after 10 seconds (50*0.2s) to avaid infinite loop.
+run_latehook() {
+	seq 50 | while read; do
+		pgrep -f pvscan || return
+		sleep 0.2
+	done
+}
