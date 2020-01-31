@@ -1,14 +1,16 @@
 ## HOOKS
 # Use 'init' or 'systemd'.
 HOOKS=(
-	init
-	# systemd
-	fsck
-	modconf
+	# init
+	systemd
 	autodetect
 	block
 	filesystems
 	keyboard
+	modconf
+	fsck
+	# mdadm
+	# lvm
 )
 
 ## COMPRESSION
