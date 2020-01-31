@@ -260,18 +260,26 @@ modprobe() {
 	command modprobe -d "$_optmoduleroot" -S "$KERNELVERSION" "$@"
 }
 
+add_autodetect() {
+	local mod
+	while read -r mod; do _autodetect_cache["$mod"]=1; done
+}
+
 # auto_modules performs auto detection of modules via sysfs.
 auto_modules() {
-	local -a mods
+	if [[ ! -d /sys/devices ]]; then
+		error '/sys does not appear to be mounted. Unable to use autodetection'
+		return 1
+	fi
 
-	mapfile -t mods < <(
-		find /sys/devices -name uevent -exec sort -u {} + | \
-			awk -F= '$1 == "MODALIAS" && !_[$0]++'
+	add_autodetect < <(
+		find /sys/devices -name uevent -exec awk -F= '
+			$1 == "MODALIAS" && $2 {
+				gsub(/-/, "_", $2)
+				printf "%s\0", $2
+			}
+		' {} + | xargs -0 modprobe -aqR -d "$_optmoduleroot" -S "$KERNELVERSION"
 	)
-
-	mapfile -t mods < <(modprobe -qaR "${mods[@]#MODALIAS=}")
-
-	(( ${#mods[*]} )) && printf "%s\n" "${mods[@]//-/_}"
 }
 
 # all_modules returns a list of modules from patterns $@.
@@ -308,28 +316,26 @@ all_modules() {
 	(( count ))
 }
 
-# add_all_modules adds all modules $@ found by all_modules to the image.
-add_all_modules() {
-	local -a mods
-
-	mapfile -t mods < <(all_modules "$@")
-	map add_module "${mods[@]}"
+add_mod() {
+	local mod
+	while read -r mod; do add_module "$mod"; done
 }
+
+# add_all_modules adds all modules $@ found by all_modules to the image.
+add_all_modules() { add_mod < <(all_modules "$@"); }
 
 # add_checked_modules is the same as add_all_modules except the modules are
 # filtered to autodetected modules, if there are no autodetected modules
 # this is equivalent to add_all_modules.
 add_checked_modules() {
-	local -a mods
-
-	if (( ${#_autodetect_cache[*]} )); then
-		mapfile -t mods < <(all_modules "$@" | \
-			grep -xFf <(printf '%s\n' "${!_autodetect_cache[@]}"))
-	else
-		mapfile -t mods < <(all_modules "$@")
-	fi
-
-	map add_module "${mods[@]}"
+	add_mod < <(
+		if (( ${#_autodetect_cache[*]} )); then
+			all_modules "$@" | grep -xFf \
+				<(printf '%s\n' "${!_autodetect_cache[@]}")
+		else
+			all_modules "$@"
+		fi
+	)
 }
 
 # add_firmware adds all firmware $@ found in _d_firmware to the image.
@@ -461,7 +467,7 @@ add_afile() {
 
 # add_runscript adds the runtime script for the calling hook to the image.
 add_runscript() {
-	local funcs fn script hookname
+	local fn script hookname
 	hookname=${BASH_SOURCE[1]%%/build}
 	hookname=${hookname##*/}
 
@@ -472,9 +478,7 @@ add_runscript() {
 
 	add "f $script /hooks/$hookname 0755"
 
-	mapfile -t funcs < <(funcgrep '^run_[[:alnum:]_]+' "$script")
-
-	for fn in "${funcs[@]}"; do
+	while read -r fn; do
 		case $fn in
 		run_earlyhook)
 			_runhooks['early']+=" $hookname"
@@ -489,7 +493,7 @@ add_runscript() {
 			_runhooks['cleanup']="$hookname ${_runhooks['cleanup']}"
 			;;
 		esac
-	done
+	done < <(funcgrep '^run_[[:alnum:]_]+' "$script")
 }
 
 # add_binary includes binary $1 and it's dependencies to the image.

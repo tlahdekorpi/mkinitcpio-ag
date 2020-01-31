@@ -1,34 +1,17 @@
 #!/bin/bash
 build() {
-	local m=
-	local -a md_devs mods
-
-	[[ $KERNELVERSION == none ]] && return 0
+	[[ $KERNELVERSION == none ]] && return
 
 	add_if_avail() {
-		local r= resolved=()
-
 		# treat this as an alias, since ext3 might be aliased to ext4. also, as
 		# of linux 3.9, we can find any filesystem by the alias "fs-$name"
 		# rather than having to guess at the corresponding module name.
-		mapfile -t resolved < <(modprobe -Ra {fs-,}"$1" 2>/dev/null)
-
-		for r in "${resolved[@]}"; do
-			_autodetect_cache["$r"]=1
-		done
+		add_autodetect < <(modprobe -qRa {fs-,}"$1")
 	}
 
-	if [[ ! -d '/sys/devices' ]]; then
-		error '/sys does not appear to be mounted. Unable to use autodetection'
-		return 1
-	fi
+	auto_modules || return 1
 
-	mapfile -t mods < <(auto_modules)
-	for m in "${mods[@]}"; do
-		_autodetect_cache["$m"]=1
-	done
-
-	# detect filesystem for root
+	# detect filesystem for root, also used by fsck hook
 	fs_autodetect_failed=1
 
 	for p in "${_optrootfs:-/}" "$_optrootfs/usr"; do
@@ -48,24 +31,16 @@ build() {
 		esac
 	done
 
-	if (( fs_autodetect_failed )); then
-		error 'failed to detect root filesystem'
-	fi
+	(( fs_autodetect_failed )) && error 'failed to detect root filesystem'
 
 	# detect filesystem for separate /usr
 	if usrfstype=$(findmnt -snero fstype -T "$_optrootfs"/usr); then
 		add_if_avail "$usrfstype"
 	fi
 
-	# scan for md raid devices
-	md_devs=(/sys/class/block/md*/md/level)
-	if [[ -e $md_devs ]]; then
-		debug 'found %d mdadm arrays to scan' "${#md_devs[*]}"
-		mapfile -t mods < <(awk '{ gsub(/raid[456]/, "raid456"); print; }' "${md_devs[@]}")
-		for m in "${mods[@]}"; do
-			_autodetect_cache["$m"]=1
-		done
-	fi
+	add_autodetect < <(
+		awk '{gsub(/raid[456]/, "raid456"); print}' /sys/class/block/md*/md/level 2>/dev/null
+	)
 
 	if (( ${#_autodetect_cache[*]} )); then
 		debug 'caching %d modules' "${#_autodetect_cache[*]}"
