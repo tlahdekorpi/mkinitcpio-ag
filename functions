@@ -591,7 +591,6 @@ find_script() {
 run_build_hook() {
 	local hook=$1 script resolved
 	local -a scripts
-	shopt -s nullglob
 
 	if ! script=$(find_script $hook); then
 		error 'no such hook: %s' "$hook"
@@ -605,24 +604,20 @@ run_build_hook() {
 		script=$resolved
 	fi
 
+	OPWD="$PWD"
+
 	# hooks can be directories containing a build hook and .archive files
 	# which are automatically added to the image.
 	if [[ ! -d "$script" ]]; then
 		scripts=("$script")
+		cd "$(dirname "$script")"
 	else
 		scripts=("$script"/?(build) "$script"/*.archive)
+		cd "$script"
 	fi
-
-	if ! (( ${#scripts[*]} )); then
-		error 'empty hook directory: %s' "$hook"
-		return 1
-	fi
-
-	OPWD="$PWD"
-	cd "$(dirname ${scripts[0]})"
 
 	for x in "${scripts[@]}"; do
-		[[ -d "$x" ]] && continue
+		[[ -f "$x" ]] || continue
 
 		if [[ -d "$script" ]]; then
 			msg "%s/%s" "$hook" "${x##*/}"
@@ -653,7 +648,6 @@ run_build_hook() {
 		fi
 	done
 
-	shopt -u nullglob
 	cd "$OPWD"
 }
 
