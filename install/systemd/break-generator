@@ -9,6 +9,7 @@ service() { cat <<!
 
 [Service]
 Type=oneshot
+Environment=PS1='$1 \\\\w \\\\$ '
 ExecStart=-/usr/bin/sulogin
 StandardInput=tty-force
 StandardOutput=inherit
@@ -17,6 +18,7 @@ KillMode=process
 IgnoreSIGPIPE=no
 TasksMax=infinity
 KillSignal=SIGHUP
+RemainAfterExit=yes
 
 [Unit]
 Description=Initrd $1 break
@@ -27,22 +29,41 @@ Conflicts=shutdown.target emergency.target
 }
 
 premount() { cat <<!
-Wants=systemd-vconsole-setup.service
-After=systemd-vconsole-setup.service
-Before=initrd-root-fs.target sysroot.mount systemd-fsck-root.service
+Before=sysroot.mount
 !
 }
 
 postmount() { cat <<!
-Wants=remote-fs.target systemd-vconsole-setup.service
-After=remote-fs.target systemd-vconsole-setup.service
-After=initrd.target initrd-parse-etc.service sysroot.mount
-Before=initrd-cleanup.service
+After=sysroot.mount
+Before=initrd.target
 !
 }
 
+generate() {
+	local item=$1 value unit target
+
+	for value in ${item//,/ }; do
+		case $value in
+		premount)
+			target=sysroot.mount.requires
+			;;
+		*)
+			target=initrd.target.requires
+			value=postmount
+			;;
+		esac
+
+		unit=initrd-break-$value.service
+
+		(service $value; $value) > $unit
+
+		mkdir -p $target
+		ln -s ../$unit $target/$unit
+	done
+}
+
 parse_cmdline() {
-	local key value unit
+	local item
 
 	set -f
 	read -r cmdline
@@ -51,24 +72,9 @@ parse_cmdline() {
 
 	for item; do
 		case $item in
-		break*|rd.break*) key=$item; break ;;
+		break*|rd.break*) generate ${item#*=} ;;
 		esac
 	done
-
-	[[ $key ]] || return 0
-	value=${key#*=}
-
-	case $value in
-	premount|postmount) ;;
-	*) value=postmount ;;
-	esac
-
-	unit=initrd-$value-break.service
-
-	(service $value; $value) > $unit
-
-	mkdir -p initrd.target.wants
-	ln -s ../$unit initrd.target.wants/$unit
 }
 
 parse_cmdline < /proc/cmdline
