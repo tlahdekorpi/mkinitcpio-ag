@@ -13,6 +13,9 @@ fr /usr/lib/udev/rules.d/{
 	69-dm-lvm-metad.rules
 }
 
+# 69-dm-lvm-metad.rules
+L /usr/bin/systemd-run
+
 L /usr/sbin/{
 	dmsetup
 	pdata_tools

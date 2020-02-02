@@ -3,9 +3,9 @@ build() {
 	map add_module dm-{mod,snapshot,mirror,cache,cache-smq,thin-pool}
 
 	if (( systemd )); then
-		map add_systemd_unit lvm2-pvscan@.service
+		add_systemd_unit lvm2-pvscan@.service
 		[[ ! -f "$_optrootfs/usr/lib/systemd/system/lvm2-lvmetad.service" ]] || \
-			map add_systemd_unit lvm2-lvmetad.service
+			add_systemd_unit lvm2-lvmetad.service
 		return
 	fi
 
