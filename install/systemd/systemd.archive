@@ -46,3 +46,10 @@ L /usr/lib/systemd/{
 
 l initrd.target usr/lib/systemd/system/default.target
 l reboot.target usr/lib/systemd/system/ctrl-alt-del.target
+
+# systemd commit f27bb6abd3b825034e0dde631ae3047128d2162d
+c usr/lib/systemd/system/initrd-udevadm-cleanup-db.service.d/f27bb6abd3.conf - - - <<!
+[Unit]
+Conflicts=systemd-udev-trigger.service systemd-udev-settle.service
+After=systemd-udev-trigger.service systemd-udev-settle.service
+!
