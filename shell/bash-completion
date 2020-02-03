@@ -1,84 +1,54 @@
 #!/bin/bash
-
-_detect_kver() {
-    local kver_validator='^[[:digit:]]+(\.[[:digit:]]+)+'
-    offset=$(hexdump -s 526 -n 2 -e '"%0d"' "$1" 2>/dev/null) || return 1
-    read kver _ < \
-        <(dd if="$1" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
-    [[ $kver =~ $kver_validator ]] && printf "$kver"
-}
-
-_lsinitcpio() {
-    local cur opts
-    opts=(-a --analyze -c --config -h --help -l --list
-          -n --nocolor -V --version -v --verbose -x --extract)
-
-    _get_comp_words_by_ref cur
-
-    case $cur in
-        -*)
-            COMPREPLY=($(compgen -W "${opts[*]}" -- "$cur")) ;;
-        *)
-            _filedir ;;
-    esac
-}
-
-_find_kernel_versions() {
-    local -a matches
-    local dir f kver
-
-    for f in /boot/*; do
-        # only match regular files which pass validation
-        if [[ ! -L $f && -f $f ]] && kver=$(_detect_kver "$f"); then
-            matches+=("$f" "$kver")
-        fi
-    done
-
-    COMPREPLY=($(compgen -W "${matches[*]}" -- $cur))
-}
-
-_files_from_dirs() {
-    local files stripsuf d f
-
-    if [[ $1 = -s ]]; then
-        stripsuf=$2
-        shift 2
-    fi
-
-    for d in "$@"; do
-        for f in "$d"/*; do
-            [[ -f $f ]] && files+=("${f##*/}")
-        done
-    done
-
-    printf '%s\n' "${files[@]%$stripsuf}"
+_ls() {
+	local -a files=(${@/%//\*})
+	files=("${files[@]/\*/' '}")
+	printf '%s\n' ${files[@]##*/}
 }
 
 _mkinitcpio() {
-    local action cur prev opts
-    opts=(-A --addhooks -c --config -g --generate -H --hookhelp -h --help -k --kernel
-          -L --listhooks -M --automods -n --nocolor -P --allpresets -p --preset -r --moduleroot
-          -S --skiphooks -s --save -t --builddir -V --version -v --verbose -z --compress)
+	local opt_short opt_long cur prev
 
-    _get_comp_words_by_ref cur prev
+	opt_short=(A a M z c d f h H o k L r n R s S v V g X)
+	opt_long=(
+		add addhooks
+		archive
+		automods
+		compress
+		config
+		debug
+		force
+		help
+		hookhelp
+		hooks
+		kernel
+		listhooks
+		moduleroot
+		nocolor
+		rootfs
+		save
+		skiphooks
+		verbose
+		version
+		write
+	)
 
-    case $prev in
-        -[cg]|--config|--generate)
-            _filedir ;;
-        -r|--moduleroot|-t|--builddir)
-            _filedir -d ;;
-        -k|--kernel)
-            _find_kernel_versions ;;
-        -p|--preset)
-            COMPREPLY=($(compgen -W "$(_files_from_dirs -s .preset /etc/mkinitcpio.d)" -- "$cur")) ;;
-        -[AHS]|--add|--hookhelp|--skiphooks)
-            COMPREPLY=($(compgen -W "$(_files_from_dirs {/usr,}/lib/initcpio/install)" -- "$cur")) ;;
-        *)
-            COMPREPLY=($(compgen -W "${opts[*]}" -- "$cur")) ;;
-    esac
+	_get_comp_words_by_ref cur prev
+
+	case $prev in
+	-r|--moduleroot|-R|--rootfs)
+		_filedir -d; return ;;
+	-k|--kernel)
+		COMPREPLY=($(compgen -W "$(_ls {/usr,}/lib/modules)" -- "$cur")); return ;;
+	-A|--add|--addhooks|-H|--hookhelp|-S|--skiphooks|-o|--hooks)
+		COMPREPLY=($(compgen -W "$(_ls /{etc,lib,usr/lib}/mkinitcpio/install/)" -- "$cur")); return ;;
+	esac
+
+	case $cur in
+	-*)
+		COMPREPLY=($(compgen -W "${opt_short[*]/#/-} ${opt_long[*]/#/--}" -- "$cur")) ;;
+	*)
+		_filedir ;;
+	esac
 }
 
 complete -F _mkinitcpio mkinitcpio
-complete -F _lsinitcpio lsinitcpio
-
-# vim: set et ts=4 sw=4 ft=sh:
