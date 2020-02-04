@@ -447,10 +447,13 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 fi
 
 map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
-(( ${#_binaries[@]} )) && addf 'L %s\n' "${!_binaries[@]}"
 (( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
 
+add 'mr - ^usr/sbin/ usr/bin/'
+(( ${#_binaries[@]} )) && addf 'L %s\n' "${!_binaries[@]}"
+
 load_config "$_f_config"
+add 'mc -'
 
 # switch out the error handler to catch all errors
 trap -- RETURN
