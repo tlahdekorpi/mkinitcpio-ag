@@ -15,6 +15,7 @@ _arguments \
 {-a,--archive}'[Show image archive]' \
 {-v,--verbose}'[Show verbose output]' \
 {-d,--debug}'[Show debug output]' \
+{-p,--path}'[Use PATH as config search path, PATH+ to prepend]:path:_files' \
 {-g,--write}'[Write image to]:file:_files' \
 {-f,--force}'[Ignore existing files]' \
 {-c,--config}'[Use config]:file:_files' \

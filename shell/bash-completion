@@ -8,7 +8,7 @@ _ls() {
 _mkinitcpio() {
 	local opt_short opt_long cur prev
 
-	opt_short=(A a M z c d f h H o k L r n R s S v V g X)
+	opt_short=(A a M z c d f h H o k L r n p R s S v V g X)
 	opt_long=(
 		add addhooks
 		archive
@@ -24,6 +24,7 @@ _mkinitcpio() {
 		listhooks
 		moduleroot
 		nocolor
+		path
 		rootfs
 		save
 		skiphooks
@@ -35,7 +36,7 @@ _mkinitcpio() {
 	_get_comp_words_by_ref cur prev
 
 	case $prev in
-	-r|--moduleroot|-R|--rootfs)
+	-r|--moduleroot|-R|--rootfs|-p|--path)
 		_filedir -d; return ;;
 	-k|--kernel)
 		COMPREPLY=($(compgen -W "$(_ls {/usr,}/lib/modules)" -- "$cur")); return ;;

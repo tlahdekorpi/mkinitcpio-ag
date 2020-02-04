@@ -6,11 +6,10 @@ declare -r version=%VERSION%
 # globals within mkinitcpio, but not intended to be used by hooks.
 _f_functions=/usr/lib/mkinitcpio/functions
 _d_config=/etc/mkinitcpio:/usr/lib/mkinitcpio
-_d_hooks=/etc/mkinitcpio/hooks:/usr/lib/mkinitcpio/hooks
-_d_install=/etc/mkinitcpio/install:/usr/lib/mkinitcpio/install
 _d_firmware=(/usr/lib/firmware{,/updates})
 
-declare _optrootfs _optmoduleroot _optgenimg _optcompress
+declare _d_hooks _d_install
+declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
@@ -19,8 +18,7 @@ declare -i _optstdout=1
 
 _devel=1
 if (( _devel )); then
-	_f_functions="$(realpath $PWD/functions)"
-	_d_config="$PWD"; _d_hooks="$PWD/hooks"; _d_install="$PWD/install"
+	_d_config="$PWD"; _f_functions="$(realpath $PWD/functions)"
 fi
 
 export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
@@ -46,6 +44,7 @@ Options:
   -a --archive           Show image archive
   -v --verbose           Show verbose output
   -d --debug             Show debug output
+  -p --path PATH         Use PATH as config search path, PATH+ to prepend
   -g --write FILE        Write image to FILE
   -f --force             Ignore existing files
   -c --config FILE       Use config FILE
@@ -228,7 +227,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dfhH:o:k:Lr:nR:sS:vVg:X:
+_opt_short=A:aMz:c:dfhH:o:k:Lr:np:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -244,6 +243,7 @@ _opt_long=(
 	listhooks
 	moduleroot:
 	nocolor
+	path:
 	rootfs:
 	save
 	skiphooks:
@@ -267,7 +267,7 @@ while :; do
 	-R|--rootfs)
 		shift
 		_optrootfs="$1"
-		RPATH=$(sed "s#:#&$_optrootfs#g" <<< "$_optrootfs$PATH")
+		RPATH=$_optrootfs${PATH//:/:$_optrootfs}
 		;;
 	-o|--hooks)
 		shift
@@ -323,8 +323,7 @@ while :; do
 		;;
 	-H|--hookhelp)
 		shift
-		hook_help "$1"
-		exit
+		_opthookhelp="$1"
 		;;
 	-L|--listhooks)
 		_opthooklist=1
@@ -340,6 +339,13 @@ while :; do
 		shift
 		_optmoduleroot=$1
 		;;
+	-p|--path)
+		shift
+		case $1 in
+		*+) _d_config=$(realpath ${1%%+}):$_d_config ;;
+		*) _d_config=$(realpath $1) ;;
+		esac
+		;;
 	-X)
 		shift
 		_optvars+=(-X "$1")
@@ -352,8 +358,16 @@ while :; do
 	shift
 done
 
+_d_install=${_d_config//://install:}/install
+_d_hooks=${_d_config//://hooks:}/hooks
+
 if [[ -t 1 ]] && (( ! _optcolor )); then
 	try_enable_color
+fi
+
+if [[ $_opthookhelp ]]; then
+	hook_help "$_opthookhelp"
+	exit 0
 fi
 
 if (( _opthooklist )); then
@@ -380,7 +394,7 @@ BUILDROOT="$_d_workdir/root"
 BUILDARCHIVE="$_d_workdir/archive"
 
 _f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
-[[ -f "$_f_config" ]] || die "missing config file: %s" "$_f_config"
+[[ -f "$_f_config" ]] || die "missing config file %s" "${_f_config:-in $_d_config}"
 
 source "$_f_config" || cleanup 1
 
