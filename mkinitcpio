@@ -11,7 +11,7 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 declare _d_hooks _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
-declare -A _runhooks _addedmodules _modpaths _autodetect_cache _binaries
+declare -A _runhooks _addedmodules _modpaths _autodetect_cache
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
 declare -i _optstdout=1
@@ -446,11 +446,13 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 	unset modname path
 fi
 
+_binaries="$_d_workdir/binaries"
+
 map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
 (( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
 
 add 'mr - ^usr/sbin/ usr/bin/'
-(( ${#_binaries[@]} )) && addf 'L %s\n' "${!_binaries[@]}"
+[[ -f "$_binaries" ]] && sort -u "$_binaries" | add
 
 load_config "$_f_config"
 add 'mc -'

@@ -681,3 +681,90 @@ try_enable_color() {
 		_color_ul=$(tput smul)
 	fi
 }
+
+add_udev_rule() {
+	local -a rules
+
+	mapfile -t rules < <(PATH="$_optrootfs"/usr/lib/udev/rules.d type -P "$@")
+	addf 'fr %s\n' "${rules[@]##$_optrootfs}"
+
+	awk -F, -- '
+	/^#|^$/ {next}
+	{
+	for (i=1; i<=NF; i++)
+		if ($i ~ "RUN({program}|+)|IMPORT{program}|ENV{REMOVE_CMD}") {
+			split($i, s, "\"")
+			sub(/ .*/, "", s[2])
+			if (s[2] !~ /^\$|^$/)
+				bin[s[2]]=1
+		}
+	}
+	END {
+	for (x in bin) {
+		if (x ~ "^(/usr|)/bin/sh$")
+			continue
+		if (x !~ "^/")
+			printf "L /usr/lib/udev/%s\n", x
+		else
+			printf "L %s\n", x
+	}
+	}' "${rules[@]}" >> "$_binaries"
+}
+
+add_systemd_unit() {
+	local -a units next reqs
+	local req
+
+	mapfile -t units < <(PATH="$_optrootfs"/usr/lib/systemd/system type -P "$@")
+	(( ! ${#units[@]} )) && return
+
+	mapfile -t next < <(
+		awk -v archive="$_binaries" -F= -- '
+		/^(#|;)/ {next}
+
+		$1 ~ "^Exec.*" && $2 !~ "^-" {
+			sub(/ .*/, "", $2)
+			sub(/^[!@\-+]{,}/, "", $2)
+				bin[$2]=1
+		}
+
+		$1 ~ "^(Requires|OnFailure)$" {
+			if (split($2, s, " ") > 1)
+				for (x in s) dep[s[x]]=1
+			else
+				dep[$2]=1
+		}
+
+		END {
+			for (x in dep) printf "%s\n", x
+			for (x in bin)
+				if (x !~ "^(/usr|)/bin/sh$")
+					printf "L %s\n", x >> archive
+		}
+		' "${units[@]}"
+	)
+
+	mapfile -t reqs < <(
+		shopt -s nullglob
+		for unit in "${units[@]}"; do
+			printf '%s\n' "$unit.requires"/*
+		done
+	)
+
+	for req in "${reqs[@]}"; do
+		[[ -L "$req" ]] || continue
+		next+=("${req##*/}")
+		addf 'gr %s - 0 0\n' "${req##$_optrootfs}"
+	done
+
+	addf 'gr /usr/lib/systemd/system/*.wants/%s - 0 0\n' "${units[@]##*/}"
+	addf 'fr %s\n' "${units[@]##$_optrootfs}"
+
+	add_systemd_unit "${next[@]}"
+}
+
+add_systemd_drop_in() {
+	addf 'c usr/lib/systemd/system/%s.d/%s.conf - - - <<!\n' "$1" "$2"
+	add
+	add '!'
+}
