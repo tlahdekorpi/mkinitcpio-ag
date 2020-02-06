@@ -13,7 +13,7 @@ declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
-declare -i _optforce _optquiet _optdebug _optcolor _opthooklist
+declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
 declare -i _optstdout=1
 
 _devel=1
@@ -44,6 +44,7 @@ Options:
   -a --archive           Show image archive
   -v --verbose           Show verbose output
   -d --debug             Show debug output
+  -N --nogen             Only run build hooks
   -p --path PATH         Use PATH as config search path, PATH+ to prepend
   -g --write FILE        Write image to FILE
   -f --force             Ignore existing files
@@ -227,7 +228,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dfhH:o:k:Lr:np:R:sS:vVg:X:
+_opt_short=A:aMz:c:dfhH:o:k:Lr:nNp:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -243,6 +244,7 @@ _opt_long=(
 	listhooks
 	moduleroot:
 	nocolor
+	nogen
 	path:
 	rootfs:
 	save
@@ -307,6 +309,9 @@ while :; do
 		;;
 	-n|--nocolor)
 		_optcolor=1
+		;;
+	-N|--nogen)
+		_optnogen=1
 		;;
 	-v|--verbose)
 		_optquiet=1
@@ -471,12 +476,11 @@ trap -- ERR
 
 ARCHIVEGEN_OPTIONS+=("${_optvars[@]}")
 
-if (( $_optarchive )); then
+if (( _optarchive )); then
 	archivegen -rootfs "$_optrootfs" -print -elf.expand \
 		"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
-	exit $?
+elif (( ! _optnogen )); then
+	build_image "$_optgenimg" "$_optcompress" "$@"
 fi
-
-build_image "$_optgenimg" "$_optcompress" "$@"
 
 cleanup $(( !!_builderrors ))
