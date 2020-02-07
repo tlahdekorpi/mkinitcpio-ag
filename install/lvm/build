@@ -2,10 +2,15 @@
 build() {
 	map add_module dm-{mod,snapshot,mirror,cache,cache-smq,thin-pool}
 
+	add_udev_rule \
+		10-dm.rules \
+		11-dm-lvm.rules \
+		13-dm-disk.rules \
+		69-dm-lvm-metad.rules \
+		95-dm-notify.rules
+
 	if (( systemd )); then
-		add_systemd_unit lvm2-pvscan@.service
-		[[ ! -f "$_optrootfs/usr/lib/systemd/system/lvm2-lvmetad.service" ]] || \
-			add_systemd_unit lvm2-lvmetad.service
+		add_systemd_unit lvm2-pvscan@.service lvm2-lvmetad.service
 		return
 	fi
 

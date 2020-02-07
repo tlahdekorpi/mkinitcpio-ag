@@ -32,11 +32,9 @@ add_keymap_file() {
 }
 
 build() {
+	add_udev_rule 90-vconsole.rules
 	add <<-!
-	fr /usr/lib/udev/rules.d/90-vconsole.rules
-
 	L /usr/bin/{loadkeys,setfont}
-	L /usr/lib/systemd/systemd-vconsole-setup
 	fr /etc/vconsole.conf
 	!
 

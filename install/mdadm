@@ -1,17 +1,11 @@
 #!/bin/bash
 build() {
 	add_checked_modules -f 'dm-' 'drivers/md/*'
-	add <<-!
-	L /usr/sbin/mdadm usr/bin/mdadm
-
-	fr /usr/lib/udev/rules.d/{
-		63-md-raid-arrays.rules
-		64-md-raid-assembly.rules
-	}
-
-	gr /usr/lib/udev/rules.d/65-md-incremental.rules -
-	gr /etc/mdadm.conf -
-	!
+	add 'gr /etc/mdadm.conf -'
+	add_udev_rule \
+		63-md-raid-arrays.rules \
+		64-md-raid-assembly.rules \
+		65-md-incremental.rules
 }
 
 help() { cat <<!

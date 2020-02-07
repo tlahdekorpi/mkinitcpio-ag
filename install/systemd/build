@@ -1,18 +1,16 @@
 #!/bin/bash
 build() {
-	local -a rules units
+	local -a units
 
 	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 	add 'L /usr/sbin/busybox usr/bin/busybox'
 
-	rules=(
-		50-udev-default.rules
-		60-persistent-storage.rules
-		64-btrfs.rules
-		80-drivers.rules
+	add_udev_rule \
+		50-udev-default.rules \
+		60-persistent-storage.rules \
+		64-btrfs.rules \
+		80-drivers.rules \
 		99-systemd.rules
-	)
-	add_udev_rule "${rules[@]}"
 
 	units=(
 		debug-shell.service

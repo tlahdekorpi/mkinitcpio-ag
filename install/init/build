@@ -2,6 +2,12 @@
 build() {
 	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
 
+	add_udev_rule \
+		50-udev-default.rules \
+		60-persistent-storage.rules \
+		64-btrfs.rules \
+		80-drivers.rules
+
 	add <<-!
 	c etc/initrd-release
 
@@ -20,14 +26,6 @@ build() {
 
 	L /usr/lib/systemd/systemd-{udevd,modules-load}
 	L /usr/bin/{udevadm,systemd-tmpfiles}
-	L /usr/lib/udev/{ata,scsi}_id
-
-	fr /usr/lib/udev/rules.d/{
-		50-udev-default.rules
-		60-persistent-storage.rules
-		64-btrfs.rules
-		80-drivers.rules
-	}
 	!
 }
 

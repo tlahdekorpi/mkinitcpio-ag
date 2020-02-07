@@ -5,22 +5,7 @@ c usr/lib/udev/rules.d/11-dm-db_persist.rules - - - <<!
 SUBSYSTEM=="block", KERNEL=="dm-[0-9]*", ACTION=="add|change", OPTIONS="db_persist"
 !
 
-fr /usr/lib/udev/rules.d/{
-	10-dm.rules
-	11-dm-lvm.rules
-	13-dm-disk.rules
-	95-dm-notify.rules
-	69-dm-lvm-metad.rules
-}
-
-# 69-dm-lvm-metad.rules
-L /usr/bin/systemd-run
-
-L /usr/sbin/{
-	dmsetup
-	pdata_tools
-	lvm
-} usr/bin
+L /usr/sbin/{pdata_tools,lvm} usr/bin
 
 l pdata_tools usr/bin/{
 	cache_check
