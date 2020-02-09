@@ -8,7 +8,7 @@ _f_functions=/usr/lib/mkinitcpio/functions
 _d_config=/etc/mkinitcpio:/usr/lib/mkinitcpio
 _d_firmware=(/usr/lib/firmware{,/updates})
 
-declare _d_hooks _d_install
+declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache
@@ -30,7 +30,7 @@ export RPATH="$PATH"
 unset GREP_OPTIONS CDPATH "${!LIBMOUNT_@}"
 
 # globals within mkinitcpio, intended to be used by hooks.
-systemd=0
+declare -i systemd
 
 usage() { cat <<!
 mkinitcpio [OPTIONS...] [FILES...]
@@ -364,7 +364,6 @@ while :; do
 done
 
 _d_install=${_d_config//://install:}/install
-_d_hooks=${_d_config//://hooks:}/hooks
 
 if [[ -t 1 ]] && (( ! _optcolor )); then
 	try_enable_color

@@ -467,14 +467,10 @@ add_afile() {
 
 # add_runscript adds the runtime script for the calling hook to the image.
 add_runscript() {
-	local fn script hookname
-	hookname=${BASH_SOURCE[1]%%/build}
-	hookname=${hookname##*/}
+	(( systemd )) && return
 
-	if ! script=$(PATH=$_d_hooks type -P "$hookname"); then
-		error 'missing runtime script for: %s' "$hookname"
-		return
-	fi
+	local fn hookname=$1 script=$2
+	[[ ! -f "$script" ]] && return 1
 
 	add "f $script /hooks/$hookname 0755"
 
@@ -606,13 +602,13 @@ run_build_hook() {
 
 	OPWD="$PWD"
 
-	# hooks can be directories containing a build hook and .archive files
-	# which are automatically added to the image.
+	# hooks can be directories containing a build hook, runscript
+	# and .archive files which are automatically added to the image.
 	if [[ ! -d "$script" ]]; then
 		scripts=("$script")
 		cd "$(dirname "$script")"
 	else
-		scripts=("$script"/?(build) "$script"/*.archive)
+		scripts=("$script"/{?(build),*.archive,runscript})
 		cd "$script"
 	fi
 
@@ -628,6 +624,10 @@ run_build_hook() {
 		case "$x" in
 		*.archive)
 			add < "$x"
+			continue
+			;;
+		*/runscript)
+			add_runscript "$hook" "$x"
 			continue
 			;;
 		esac

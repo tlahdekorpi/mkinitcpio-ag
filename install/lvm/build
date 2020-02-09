@@ -13,8 +13,6 @@ build() {
 		add_systemd_unit lvm2-pvscan@.service lvm2-lvmetad.service
 		return
 	fi
-
-	add_runscript
 }
 
 help() { cat <<!

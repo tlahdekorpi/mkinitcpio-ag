@@ -9,7 +9,7 @@ install: all
 		< mkinitcpio | install -Dm0755 /dev/stdin $(DESTDIR)/usr/bin/mkinitcpio
 
 	install -dm755 $(DESTDIR)/usr/lib/mkinitcpio
-	cp -at $(DESTDIR)/usr/lib/mkinitcpio hooks install
+	cp -at $(DESTDIR)/usr/lib/mkinitcpio install
 	install -m644 -t $(DESTDIR)/usr/lib/mkinitcpio functions config
 
 	install -Dm644 man/mkinitcpio.8      $(DESTDIR)/usr/share/man/man8/mkinitcpio.8
