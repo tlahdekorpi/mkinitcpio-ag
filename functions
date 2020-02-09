@@ -712,6 +712,8 @@ add_udev_rule() {
 }
 
 add_systemd_unit() {
+	(( ! systemd )) && return
+
 	local -a units next reqs
 	local req
 
@@ -764,6 +766,8 @@ add_systemd_unit() {
 }
 
 add_systemd_drop_in() {
+	(( ! systemd )) && return
+
 	addf 'c usr/lib/systemd/system/%s.d/%s.conf - - - <<!\n' "$1" "$2"
 	add
 	add '!'

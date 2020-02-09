@@ -9,10 +9,7 @@ build() {
 		69-dm-lvm-metad.rules \
 		95-dm-notify.rules
 
-	if (( systemd )); then
-		add_systemd_unit lvm2-pvscan@.service lvm2-lvmetad.service
-		return
-	fi
+	add_systemd_unit lvm2-pvscan@.service lvm2-lvmetad.service
 }
 
 help() { cat <<!
