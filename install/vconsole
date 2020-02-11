@@ -1,56 +1,47 @@
 #!/bin/bash
-get_decompressor() {
-	case "$1" in
-	*.gz)
-		cat=zcat
-		of=${1%.gz}
-		;;
-	*.bz2)
-		cat=bzcat
-		of=${1%.bz2}
-		;;
-	*)
-		cat=cat
-		of=$1
-		;;
-	esac
+add_keymap_file() {
+	local f c inc
+
+	find "$_optrootfs"/usr/@(share|lib)/kbd/keymaps/ \
+		-type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?" \
+	| while read -r f; do
+		add "fr ${f##$_optrootfs}"
+
+		case "$f" in
+		*.gz) c=gzip ;;
+		*.bz2) c=bzip2 ;;
+		esac
+
+		${c:-cat} ${c:+-cd} "$f" | awk -F'"' '/^include/ {print $2}' \
+			| while read -r inc; do add_keymap_file "$inc"; done
+	done
 }
 
-add_keymap_file() {
-	local cat cmd rest f of
-
-	while read f; do
-		get_decompressor "$f"
-		while read -r cmd rest; do
-			if [[ $cmd == include ]]; then
-				eval set $rest
-				add_keymap_file "$1"
-			fi
-		done < <($cat "$f")
-		add "fr ${f##$_optrootfs}"
-	done < <(find "$_optrootfs"/usr/@(share|lib)/kbd/keymaps/ -type f -regex ".*/$1\(\.inc\)?\(\.gz\|\.bz2\)?")
+add_consolefont_file() {
+	local f
+	for f in "$_optrootfs"/usr/@(share|lib)/kbd/consolefonts/"$1".@(fnt|psf?(u))?(.gz); do
+		[[ -f $f ]] && add "fr ${f##$_optrootfs}"
+	done
 }
 
 build() {
+	local f vc="$_optrootfs/etc/vconsole.conf"
+
 	add_udev_rule 90-vconsole.rules
-	add <<-!
-	L /usr/bin/{loadkeys,setfont}
-	fr /etc/vconsole.conf
-	!
+	add 'L /usr/bin/{loadkeys,setfont}'
 
-	# subshell to avoid namespace pollution
-	(
-	shopt -s nullglob
-	[[ -s "$_optrootfs"/etc/vconsole.conf ]] && source "$_optrootfs"/etc/vconsole.conf
+	[[ -s "$vc" ]] || return 0
+	add 'fr /etc/vconsole.conf'
 
-	[[ $KEYMAP ]] && add_keymap_file $KEYMAP.map
-	[[ $KEYMAP_TOGGLE ]] && add_keymap_file $KEYMAP_TOGGLE.map
-
-	[[ ! $FONT ]] && return
-	for file in "$_optrootfs"/usr/@(share|lib)/kbd/consolefonts/"$FONT".@(fnt|psf?(u))?(.gz); do
-		add "fr ${file##$_optrootfs}"
+	awk -F= '
+	$1 ~ /^KEYMAP(|_TOGGLE)/ {print $2".map"}
+	$1 == "FONT" {print $2}
+	' "$vc" | while read -r f; do
+		case "$f" in
+		*.map) add_keymap_file "$f" ;;
+		*) add_consolefont_file "$f" ;;
+		esac
 	done
-	)
 }
 
 help() { cat <<!
