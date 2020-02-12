@@ -1,4 +1,4 @@
-#!/usr/bin/ash
+#!/usr/bin/sh
 
 mount_handler=default_mount_handler
 init=/sbin/init
@@ -9,7 +9,8 @@ rd_logmask=0
 mount_setup
 
 # parse the kernel command line
-parse_cmdline </proc/cmdline
+xargs printf '%s\n' < /proc/cmdline > /cmdline
+parse_cmdline < /cmdline
 
 # setup logging as early as possible
 rdlogger_start
