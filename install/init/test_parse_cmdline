@@ -150,8 +150,12 @@ test_parse "foo='\"bar baz\"' herp='\"de\"rp'" \
 test_parse 'foo=bar"baz' \
   'foo' 'bar"baz'
 
+# quote in middle
+test_parse 'foo=bar="foo bar baz"' \
+  'foo' 'bar=foo bar baz'
+
 # neighboring quoted regions
-test_parse --expect-fail 'foo="bar""baz"' \
+test_parse 'foo="bar""baz"' \
   'foo' 'barbaz'
 test_parse --expect-fail "foo=\"bar\"'baz'" \
   'foo' "barbaz"
