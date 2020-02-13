@@ -1,42 +1,32 @@
 #!/bin/bash
 build() {
+	local p fstype
+
 	[[ $KERNELVERSION == none ]] && return
 
 	add_if_avail() {
 		# treat this as an alias, since ext3 might be aliased to ext4. also, as
 		# of linux 3.9, we can find any filesystem by the alias "fs-$name"
 		# rather than having to guess at the corresponding module name.
+		fstypes+=("$1")
+		fs_autodetect_failed=0
 		add_autodetect < <(modprobe -qRa {fs-,}"$1")
 	}
 
 	auto_modules || return 1
 
-	# detect filesystem for root, also used by fsck hook
-	fs_autodetect_failed=1
-
 	for p in "${_optrootfs:-/}" "$_optrootfs/usr"; do
-		if ! rootfstype=$(findmnt -uno fstype -T $p); then
+		if ! fstype=$(findmnt -uno fstype -T $p); then
 			continue
 		fi
 
-		case "$rootfstype" in
-		tmpfs)
-			continue
-			;;
-		*)
-			add_if_avail "$rootfstype"
-			fs_autodetect_failed=0
-			break
-			;;
+		case "$fstype" in
+		tmpfs) continue ;;
+		*) add_if_avail "$fstype" ;;
 		esac
 	done
 
 	(( fs_autodetect_failed )) && error 'failed to detect root filesystem'
-
-	# detect filesystem for separate /usr
-	if usrfstype=$(findmnt -snero fstype -T "$_optrootfs"/usr); then
-		add_if_avail "$usrfstype"
-	fi
 
 	add_autodetect < <(
 		awk '{gsub(/raid[456]/, "raid456"); print}' /sys/class/block/md*/md/level 2>/dev/null

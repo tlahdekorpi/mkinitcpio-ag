@@ -30,7 +30,8 @@ export RPATH="$PATH"
 unset GREP_OPTIONS CDPATH "${!LIBMOUNT_@}"
 
 # globals within mkinitcpio, intended to be used by hooks.
-declare -i systemd
+declare -i systemd fs_autodetect_failed=1
+declare -a fstypes
 
 usage() { cat <<!
 mkinitcpio [OPTIONS...] [FILES...]

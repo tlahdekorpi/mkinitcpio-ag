@@ -1,44 +1,26 @@
 #!/bin/bash
 build() {
-	local fsck= added=0
+	local f
 
-	add 'c etc/fstab' 'l ../proc/self/mounts etc/mtab'
+	add <<-!
+	c etc/fstab
+	gr /etc/e2fsck.conf -
+	l ../proc/self/mounts etc/mtab
+	!
 
-	add_fsck() {
-		if [[ $1 = ext[234] ]]; then
-			add_binary fsck.ext4
-			add_symlink /usr/bin/fsck.ext2 fsck.ext4
-			add_symlink /usr/bin/fsck.ext3 fsck.ext4
-		else
-			add_binary "fsck.$1"
-		fi
-	}
-
-	if (( ! fs_autodetect_failed )) && [[ $rootfstype$usrfstype ]]; then
-		if [[ $rootfstype ]]; then
-			add_fsck $rootfstype && (( ++added ))
-		fi
-
-		if [[ $usrfstype && $usrfstype != $rootfstype ]]; then
-			add_fsck $usrfstype && (( ++added ))
-		fi
-	else
-		for fsck in "$_optrootfs"/usr/sbin/fsck.*; do
-			[[ -f $fsck ]] || continue
-			add_binary "$fsck" && (( ++added ))
-		done
+	if (( fs_autodetect_failed )); then
+		printf '%s\n' 'gL /usr/sbin/fsck.*' >> "$_binaries"
 	fi
 
-	if (( ! added )); then
-		warning "No fsck helpers found. fsck will not be run on boot."
-		return
-	fi
+	for f in "${fstypes[@]}"; do
+		if [[ ! -f "$_optrootfs/usr/sbin/fsck.$f" ]]; then
+			warning "missing fsck helper: %s" "$f"
+			continue
+		fi
+		add_binary "/usr/sbin/fsck.$f"
+	done
 
-	add_binary fsck
-	if [[ -e /etc/e2fsck.conf ]]; then
-		add_file "$_optrootfs"/etc/e2fsck.conf
-	fi
-
+	add_binary "/usr/sbin/fsck"
 }
 
 help() { cat <<!
