@@ -9,10 +9,18 @@ build() {
 	!
 
 	if (( fs_autodetect_failed )); then
-		printf '%s\n' 'gL /usr/sbin/fsck.*' >> "$_binaries"
+		cat <<-! >> "$_binaries"
+		gL /usr/sbin/fsck.*
+		gL /usr/sbin/{btrfs,xfs_repair}
+		!
 	fi
 
 	for f in "${fstypes[@]}"; do
+		case "$f" in
+		btrfs) add_binary '/usr/sbin/btrfs' ;;
+		xfs) add_binary '/usr/sbin/xfs_repair' ;;
+		esac
+
 		if [[ ! -f "$_optrootfs/usr/sbin/fsck.$f" ]]; then
 			warning "missing fsck helper: %s" "$f"
 			continue
