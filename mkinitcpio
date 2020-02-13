@@ -204,10 +204,10 @@ build_image() {
 	esac
 
 	if (( _optstdout )); then
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand \
+		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback} \
 			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 	else
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.expand \
+		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback} \
 			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
 			$compress "${COMPRESSION_OPTIONS[@]}" > "$out"
 
@@ -476,7 +476,7 @@ trap -- ERR
 ARCHIVEGEN_OPTIONS+=("${_optvars[@]}")
 
 if (( _optarchive )); then
-	archivegen -rootfs "$_optrootfs" -print -elf.expand \
+	archivegen -rootfs "$_optrootfs" -print -elf.{expand,fallback} \
 		"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 elif (( ! _optnogen )); then
 	build_image "$_optgenimg" "$_optcompress" "$@"

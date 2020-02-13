@@ -493,31 +493,20 @@ add_runscript() {
 }
 
 # add_binary includes binary $1 and it's dependencies to the image.
-# optional destination $2.
 add_binary() {
-	local src dst binary
+	local src=${1:?}
 
 	if [[ ${1:0:1} != '/' ]]; then
-		src=$(PATH=$RPATH type -P "$1")
+		if ! src=$(PATH=$RPATH type -P "$1"); then
+			error 'failed to add binary: %s' "$1"
+			return 1
+		fi
+		src="${src##$_optrootfs}"
 	else
 		src=$1
 	fi
 
-	if [[ ! -n $src ]]; then
-		error 'failed to add binary: %s' "$1"
-		return 1
-	fi
-
-	binary="${src##$_optrootfs}"
-
-	dst=${2:-$binary}
-	dst=${dst/\/sbin\//\/bin\/}
-
-	if [[ "$(head -c1 $src)" != "#" ]]; then
-		add "L $binary $dst"
-	else
-		add "fr $binary $dst 0755"
-	fi
+	printf 'L %s\n' "$src" >> "$_binaries"
 }
 
 # load_config adds all modules, binaries, files and the config into the image,
