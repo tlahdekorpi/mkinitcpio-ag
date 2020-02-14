@@ -1,0 +1,9 @@
+#!/bin/bash
+build() {
+	add_udev_rule 10-dm.rules 13-dm-disk.rules 95-dm-notify.rules
+}
+
+help() { cat <<!
+dm
+!
+}
