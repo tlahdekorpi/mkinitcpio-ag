@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/ash --
 
 mount_handler=default_mount_handler
 init=/sbin/init

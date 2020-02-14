@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/ash --
 # This file contains common functions used in init and in hooks
 
 # logging targets

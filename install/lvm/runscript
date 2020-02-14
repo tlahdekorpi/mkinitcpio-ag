@@ -1,4 +1,4 @@
-#!/bin/sh --
+#!/bin/ash --
 run_earlyhook() {
 	# blame lvm
 	sed -i \
@@ -11,8 +11,8 @@ run_earlyhook() {
 }
 
 run_cleanuphook() {
-	[[ -f /run/lvmetad.pid ]] || return
-	read pid < /run/lvmetad.pid; kill $pid
+	[ -f /run/lvmetad.pid ] || return
+	read pid < /run/lvmetad.pid; kill "$pid"
 }
 
 # We are suffering a race condition in non-systemd initramfs: If lvmetad is
