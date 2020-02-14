@@ -28,6 +28,8 @@ build() {
 		systemd-udevd-kernel.socket
 		systemd-udevd.service
 		systemd-volatile-root.service
+		systemd-ask-password-console.path
+		systemd-ask-password-console.service
 
 		initrd-cleanup.service
 		initrd-fs.target
@@ -49,6 +51,7 @@ build() {
 		sockets.target
 		swap.target
 		timers.target
+		cryptsetup.target
 	)
 	add_systemd_unit "${units[@]}"
 

@@ -1,0 +1,28 @@
+#!/bin/bash
+build() {
+	run_build_hook dm
+
+	map add_module dm-{crypt,integrity}
+	add_all_modules /crypto/
+
+	add_binary /usr/sbin/mkswap
+	add_binary /usr/bin/systemd-tty-ask-password-agent
+
+	add <<-!
+	# cryptsetup calls pthread_create(), which dlopen()s libgcc_s.so.1
+	L /usr/lib64/libgcc_s.so.1
+
+	L /usr/lib/systemd/{
+		systemd-cryptsetup
+		system-generators/systemd-cryptsetup-generator
+	}
+	mr - .initramfs$
+	gr /etc/crypttab.initramfs -
+	mc
+	!
+}
+
+help() { cat <<!
+encrypt
+!
+}

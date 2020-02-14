@@ -1,0 +1,34 @@
+#!/bin/ash --
+run_hook() {
+	local service cmd op name device password options
+
+	mkdir -p /run/systemd/ask-password /run/cryptsetup /generator
+
+	/usr/lib/systemd/system-generators/systemd-cryptsetup-generator \
+		/generator /generator.early /generator.late
+
+	[ -d /generator/cryptsetup.target.requires ] || return
+
+	systemd-tty-ask-password-agent --watch --console &
+
+	for service in /generator/cryptsetup.target.requires/systemd-cryptsetup@*.service; do
+		[ -L "$service" ] || continue
+		while read -r cmd op name device password options; do
+			case $cmd in
+			ExecStart=*systemd-cryptsetup*)
+				name=${name#\'} name=${name%\'}
+				device=${device#\'} device=${device%\'}
+				password=${password#\'} password=${password%\'}
+				options=${options#\'} options=${options%\'}
+				"${cmd#ExecStart=}" "$op" "$name" "$device" "$password" "$options"
+				;;
+			ExecStartPost=*mkswap*)
+				op=${op#\'} op=${op%\'}
+				"${cmd#ExecStartPost=}" "$op"
+				;;
+			esac
+		done < "$service"
+	done
+
+	kill %+
+}
