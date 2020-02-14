@@ -574,8 +574,11 @@ find_script() {
 }
 
 run_build_hook() {
-	local hook=$1 script resolved
+	local hook=$1 script resolved OPWD
 	local -a scripts
+
+	(( _built_hooks["$hook"] )) && return 0
+	_built_hooks["$hook"]=1
 
 	if ! script=$(find_script $hook); then
 		error 'no such hook: %s' "$hook"

@@ -11,7 +11,7 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
-declare -A _runhooks _addedmodules _modpaths _autodetect_cache
+declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
 declare -i _optstdout=1
