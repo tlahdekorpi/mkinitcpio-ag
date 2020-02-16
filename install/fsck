@@ -8,12 +8,10 @@ build() {
 	l ../proc/self/mounts etc/mtab
 	!
 
-	if (( fs_autodetect_failed )); then
-		cat <<-! >> "$_binaries"
-		gL /usr/sbin/fsck.*
-		gL /usr/sbin/{btrfs,xfs_repair}
-		!
-	fi
+	(( fs_autodetect_failed )) && add <<-!
+	gL /usr/sbin/fsck.*
+	gL /usr/sbin/{btrfs,xfs_repair}
+	!
 
 	for f in "${fstypes[@]}"; do
 		case "$f" in

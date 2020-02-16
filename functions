@@ -506,7 +506,7 @@ add_binary() {
 		src=$1
 	fi
 
-	printf 'L %s\n' "$src" >> "$_binaries"
+	add "L $src"
 }
 
 # load_config adds all modules, binaries, files and the config into the image,
@@ -700,7 +700,7 @@ add_udev_rule() {
 		else
 			printf "L %s\n", x
 	}
-	}' "${rules[@]}" >> "$_binaries"
+	}' "${rules[@]}" | add
 }
 
 add_systemd_unit() {
@@ -713,7 +713,7 @@ add_systemd_unit() {
 	(( ! ${#units[@]} )) && return
 
 	mapfile -t next < <(
-		awk -v archive="$_binaries" -F= -- '
+		awk -v archive="$BUILDARCHIVE" -F= -- '
 		/^(#|;)/ {next}
 
 		$1 ~ "^Exec.*" && $2 !~ "^-" {

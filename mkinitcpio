@@ -205,10 +205,10 @@ build_image() {
 	esac
 
 	if (( _optstdout )); then
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback} \
+		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback,once} \
 			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 	else
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback} \
+		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback,once} \
 			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
 			$compress "${COMPRESSION_OPTIONS[@]}" > "$out"
 
@@ -451,16 +451,11 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 	unset modname path
 fi
 
-_binaries="$_d_workdir/binaries"
-
+add 'mr - ^usr/sbin/ usr/bin/'
 map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
 (( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
 
-add 'mr - ^usr/sbin/ usr/bin/'
-[[ -f "$_binaries" ]] && sort -u "$_binaries" | add
-
 load_config "$_f_config"
-add 'mc -'
 
 # switch out the error handler to catch all errors
 trap -- RETURN
@@ -477,7 +472,7 @@ trap -- ERR
 ARCHIVEGEN_OPTIONS+=("${_optvars[@]}")
 
 if (( _optarchive )); then
-	archivegen -rootfs "$_optrootfs" -print -elf.{expand,fallback} \
+	archivegen -rootfs "$_optrootfs" -print -elf.{expand,fallback,once} \
 		"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 elif (( ! _optnogen )); then
 	build_image "$_optgenimg" "$_optcompress" "$@"

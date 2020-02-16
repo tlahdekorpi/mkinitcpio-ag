@@ -18,7 +18,7 @@ build() {
 	}
 	mr - .initramfs$
 	gr /etc/crypttab.initramfs -
-	mc
+	mc -
 	!
 }
 
