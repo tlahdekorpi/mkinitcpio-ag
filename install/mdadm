@@ -1,7 +1,7 @@
 #!/bin/bash
 build() {
 	add_checked_modules -f 'dm-' 'drivers/md/*'
-	add 'gr /etc/mdadm.conf -'
+	add '?fr /etc/mdadm.conf'
 	add_udev_rule \
 		63-md-raid-arrays.rules \
 		64-md-raid-assembly.rules \

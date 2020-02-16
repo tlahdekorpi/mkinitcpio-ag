@@ -1,4 +1,4 @@
-gr /etc/lvm/lvm.conf - 0 0
+?fr /etc/lvm/lvm.conf
 
 L /usr/sbin/{pdata_tools,lvm} usr/bin
 

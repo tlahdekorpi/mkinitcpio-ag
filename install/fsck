@@ -4,8 +4,9 @@ build() {
 
 	add <<-!
 	c etc/fstab
-	gr /etc/e2fsck.conf -
 	l ../proc/self/mounts etc/mtab
+
+	?fr /etc/e2fsck.conf
 	!
 
 	(( fs_autodetect_failed )) && add <<-!

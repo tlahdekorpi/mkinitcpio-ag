@@ -16,9 +16,8 @@ build() {
 		systemd-cryptsetup
 		system-generators/systemd-cryptsetup-generator
 	}
-	mr - .initramfs$
-	gr /etc/crypttab.initramfs -
-	mc -
+
+	?fr /etc/crypttab.initramfs etc/crypttab
 	!
 }
 
