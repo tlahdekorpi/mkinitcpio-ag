@@ -23,7 +23,7 @@ L /usr/bin/{mount,umount,kmod}
 l kmod usr/bin/{dep,ins,rm,ls}mod
 l kmod usr/bin/mod{probe,info}
 
-L /usr/lib64/libnss_files.so.2
+i libnss_files.so.2
 c etc/passwd - - - root:x:0:0:root:/:/bin/sh
 c etc/group  - - - root:x:0:root
 c etc/shadow - - - root::::::::

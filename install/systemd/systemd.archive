@@ -1,4 +1,4 @@
-L /usr/lib64/libnss_files.so.2
+i libnss_files.so.2
 
 c etc/passwd - - - root:x:0:0:root:/:/usr/bin/sh
 c etc/group  - - - root:x:0:root

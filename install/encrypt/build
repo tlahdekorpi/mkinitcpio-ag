@@ -5,17 +5,17 @@ build() {
 	map add_module dm-{crypt,integrity}
 	add_all_modules /crypto/
 
-	add_binary /usr/sbin/mkswap
-	add_binary /usr/bin/systemd-tty-ask-password-agent
-
 	add <<-!
 	# cryptsetup calls pthread_create(), which dlopen()s libgcc_s.so.1
-	L /usr/lib64/libgcc_s.so.1
+	i libgcc_s.so.1
 
 	L /usr/lib/systemd/{
 		systemd-cryptsetup
 		system-generators/systemd-cryptsetup-generator
 	}
+
+	L /usr/bin/systemd-tty-ask-password-agent
+	L /usr/sbin/mkswap
 
 	?fr /etc/crypttab.initramfs etc/crypttab
 	!
