@@ -674,10 +674,32 @@ try_enable_color() {
 	fi
 }
 
+add_udev_rule1() {
+	local -a rules
+
+	mapfile -t rules < <(PATH="$_optrootfs"/usr/lib/udev/rules.d type -P "$@")
+	if (( ! ${#rules[@]} && $# == 1 )); then
+		return 0
+	fi
+	if (( ! ${#rules[@]} )); then
+		error "missing udev rules: %d %s" "${#rules[@]}" "$*"
+		return 1
+	fi
+
+	add_udev_rule "${rules[0]##*/}"
+}
+
 add_udev_rule() {
 	local -a rules
 
 	mapfile -t rules < <(PATH="$_optrootfs"/usr/lib/udev/rules.d type -P "$@")
+	if (( ${#rules[@]} != $# )); then
+		error "missing udev rules: %s" "$*"
+		return 1
+	fi
+
+	(( ! ${#rules[@]} )) && return
+
 	addf 'fr %s\n' "${rules[@]##$_optrootfs}"
 
 	awk -F, -- '
@@ -703,6 +725,23 @@ add_udev_rule() {
 	}' "${rules[@]}" | add
 }
 
+add_systemd_unit1() {
+	(( ! systemd )) && return
+
+	local -a units
+
+	mapfile -t units < <(PATH="$_optrootfs"/usr/lib/systemd/system type -P "$@")
+	if (( ! ${#units[@]} && $# == 1 )); then
+		return 0
+	fi
+	if (( ! ${#units[@]} )); then
+		error "missing systemd units: %s" "$*"
+		return 1
+	fi
+
+	add_systemd_unit "${units[0]##*/}"
+}
+
 add_systemd_unit() {
 	(( ! systemd )) && return
 
@@ -710,6 +749,11 @@ add_systemd_unit() {
 	local req
 
 	mapfile -t units < <(PATH="$_optrootfs"/usr/lib/systemd/system type -P "$@")
+	if (( ${#units[@]} != $# )); then
+		error "missing systemd units: %s" "$*"
+		return 1
+	fi
+
 	(( ! ${#units[@]} )) && return
 
 	mapfile -t next < <(

@@ -2,8 +2,12 @@
 build() {
 	run_build_hook dm
 	map add_module dm-{mod,snapshot,mirror,cache,cache-smq,thin-pool}
-	add_udev_rule 11-dm-lvm.rules 69-dm-lvm-metad.rules
-	add_systemd_unit lvm2-pvscan@.service lvm2-lvmetad.service
+
+	add_udev_rule1 69-{dm-,}lvm-metad.rules
+	add_udev_rule1 11-dm-lvm.rules 56-lvm.rules
+
+	add_systemd_unit lvm2-pvscan@.service
+	add_systemd_unit1 lvm2-lvmetad.service
 }
 
 help() { cat <<!
