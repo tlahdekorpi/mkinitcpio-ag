@@ -1,6 +1,6 @@
 #!/bin/bash
 build() {
-	busybox --list | awk '/fsck/{next} {print "l busybox usr/bin/"$1}' | add
+	run_build_hook busybox
 
 	add_udev_rule \
 		50-udev-default.rules \
@@ -17,7 +17,7 @@ build() {
 
 	f $PWD/init{,_functions} / 0755
 
-	L /usr/sbin/{busybox,blkid,switch_root} usr/bin
+	L /usr/sbin/{blkid,switch_root}
 	L /usr/bin/{u,}mount
 
 	L /usr/bin/kmod

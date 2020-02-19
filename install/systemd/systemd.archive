@@ -28,7 +28,7 @@ l kmod usr/bin/mod{probe,info}
 
 L /usr/bin/journalctl
 
-l /usr/lib/systemd/systemd init
+l usr/lib/systemd/systemd init
 
 L /usr/lib/systemd/system-generators/{
 	systemd-fstab-generator
