@@ -142,6 +142,9 @@ parse_cmdline_item() {
         rd.debug)
             rd_debug=y
             ;;
+        rd.break)
+            break="${value:-y}"
+            ;;
         rd.log)
             if [ -n "$value" ]; then
                 set_log_option "$value"
