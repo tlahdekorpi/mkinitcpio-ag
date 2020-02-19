@@ -11,13 +11,14 @@ build() {
 
 	(( fs_autodetect_failed )) && add <<-!
 	gL /usr/sbin/fsck.*
-	gL /usr/sbin/{btrfs,xfs_repair}
+	?L /usr/sbin/xfs_repair
+	?L /usr/(s|)bin/btrfs
 	!
 
 	for f in "${fstypes[@]}"; do
 		case "$f" in
-		btrfs) add_binary '/usr/sbin/btrfs' ;;
-		xfs) add_binary '/usr/sbin/xfs_repair' ;;
+		btrfs) add 'L /usr/(s|)bin/btrfs' ;;
+		xfs) add 'L /usr/sbin/xfs_repair' ;;
 		esac
 
 		if [[ ! -f "$_optrootfs/usr/sbin/fsck.$f" ]]; then
