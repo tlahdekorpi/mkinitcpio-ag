@@ -159,7 +159,7 @@ kver() {
 }
 
 debug() {
-	(( ! _optdebug )) || msg "debug: $@"
+	(( ! _optdebug )) || printf "debug: $1\n" "${@:2}" >&2
 }
 
 msg() {
@@ -216,7 +216,6 @@ arrayize_config() {
 	[[ ${BINARIES@a} != *a* ]] && BINARIES=($BINARIES)
 	[[ ${FILES@a} != *a* ]] && FILES=($FILES)
 	[[ ${HOOKS@a} != *a* ]] && HOOKS=($HOOKS)
-	[[ ${COMPRESSION_OPTIONS@a} != *a* ]] && COMPRESSION_OPTIONS=($COMPRESSION_OPTIONS)
 	set +f
 }
 
