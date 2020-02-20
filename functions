@@ -636,7 +636,8 @@ run_build_hook() {
 
 		if ! build; then
 			error 'build function failed: %s' "$hook"
-			break
+			cd "$OPWD"
+			return 1
 		fi
 	done
 
