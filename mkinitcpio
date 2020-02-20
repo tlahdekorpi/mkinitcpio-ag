@@ -10,7 +10,7 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 
 declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
-declare -a _hooks _opthooks _optskiphooks _optaddhooks _optvars _fwerrors
+declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors _ag_opts _comp_opts
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
@@ -161,7 +161,7 @@ hook_list() {
 				resolved=${resolved##*/}
 				if ! index_of "$resolved" "${depr[@]}"; then
 					# deprecated hook
-					depr+=(${hook##*/})
+					depr+=("${hook##*/}")
 				fi
 				continue
 			fi
@@ -182,46 +182,6 @@ compute_hookset() {
 		in_array "$h" "${_optskiphooks[@]}" && continue
 		_hooks+=("$h")
 	done
-}
-
-build_image() {
-	local out=$1; shift
-	local compress=$1; shift
-	local errmsg error
-
-	case $compress in
-	cat)
-		unset COMPRESSION_OPTIONS
-		;;
-	xz)
-		COMPRESSION_OPTIONS+=('--check=crc32')
-		;;
-	lz4)
-		COMPRESSION_OPTIONS+=('-l')
-		;;
-	gzip|pigz)
-		COMPRESSION_OPTIONS+=('-n')
-		;;
-	esac
-
-	if (( _optstdout )); then
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback,once} \
-			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
-	else
-		archivegen -rootfs "$_optrootfs" -fmt cpio -elf.{expand,fallback,once} \
-			"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" | \
-			$compress "${COMPRESSION_OPTIONS[@]}" > "$out"
-
-		error=$(( ${PIPESTATUS[1]} ))
-	fi
-
-	if (( _builderrors )); then
-		warning "errors were encountered during the build. The image may not be complete."
-	fi
-
-	if (( error )); then
-		error "image generation failed"
-	fi
 }
 
 source "$_f_functions"
@@ -270,6 +230,8 @@ while :; do
 	-R|--rootfs)
 		shift
 		_optrootfs="$1"
+		[[ -d "$_optrootfs" ]] || \
+			die 'no such directory: %s' "$_optrootfs"
 		RPATH=$_optrootfs${PATH//:/:$_optrootfs}
 		;;
 	-o|--hooks)
@@ -354,7 +316,7 @@ while :; do
 		;;
 	-X)
 		shift
-		_optvars+=(-X "$1")
+		_ag_opts+=(-X "$1")
 		;;
 	--)
 		shift
@@ -409,7 +371,7 @@ arrayize_config
 # HOOKS should not be referenced from here on
 compute_hookset
 
-(( ${#_opthooks[@]} )) && _hooks=(${_opthooks[@]})
+(( ${#_opthooks[@]} )) && _hooks=("${_opthooks[@]}")
 (( ${#_hooks[*]} )) || die 'no hooks'
 
 in_array systemd "${_hooks[@]}" && systemd=1
@@ -423,24 +385,33 @@ fi
 
 # do not overwrite existing files without force
 if (( ! _optstdout )) && [[ -f $_optgenimg ]]; then
-	(( _optforce )) || die 'cannot write image: file exists'
+	(( _optforce )) || die 'file exists, use --force'
 fi
 
-COMPRESSION="$(type -P ${COMPRESSION[@]} | head -n1)"
-COMPRESSION="${COMPRESSION##*/}"
+if (( ! _optstdout )); then
+	if [[ $_optcompress ]]; then
+		COMPRESSION=("$_optcompress")
+	elif (( ! ${#COMPRESSION[@]} )); then
+		COMPRESSION=(pigz gzip lz4 xz)
+	fi
 
-_optcompress=${_optcompress:-${COMPRESSION:-gzip}}
-if ! type -P "$_optcompress" > /dev/null; then
-	warning 'no such compressor: %s' "$_optcompress"
-	_optcompress=cat
+	if ! read -r _optcompress < <(
+		type -P "${COMPRESSION[@]}"
+	); then
+		die 'unable to find compressor: %s' "${COMPRESSION[*]}"
+	fi
+
+	case ${_optcompress##*/} in
+	pigz|gzip)
+		_comp_opts=('-n') ;;
+	lz4)
+		_comp_opts=('-l') ;;
+	xz)
+		_comp_opts=('--check=crc32') ;;
+	esac
 fi
 
-msg "$KERNELVERSION, $_optcompress${_optrootfs:+, sysroot:$_optrootfs}"
-
-# set functrace and trap to catch errors in add_* functions
-declare -i _builderrors=0
-set -o functrace
-trap '(( $? )) && [[ $FUNCNAME = add_* ]] && (( ++_builderrors ))' RETURN
+msg "$KERNELVERSION${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
 
 # prime the _addedmodules list with the builtins for this kernel
 if [[ -r $_d_kmoduledir/modules.builtin ]]; then
@@ -451,31 +422,45 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 	unset modname path
 fi
 
+# set functrace and trap to catch errors in add_* functions
+declare -i _builderrors=0
+set -o functrace
+trap '(( $? )) && [[ $FUNCNAME = add_* ]] && (( ++_builderrors ))' RETURN
+
 add 'mr - ^usr/sbin/ usr/bin/'
-map run_build_hook "${_hooks[@]}" || (( ++_builderrors ))
+for hook in "${_hooks[@]}"; do
+	if run_build_hook "$hook"; then
+		continue
+	fi
+	(( _builderrors++ ))
+	case $hook in autodetect) break ;; esac
+done
+
 (( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
+(( _builderrors )) && cleanup 1
 
 load_config "$_f_config"
 
-# switch out the error handler to catch all errors
 trap -- RETURN
-trap '(( ++_builderrors ))' ERR
-set -o errtrace
+set +o functrace
 
 install_modules "${!_modpaths[@]}"
 
-# unset errtrace and trap
-set +o functrace
-set +o errtrace
-trap -- ERR
+_ag_opts+=(-elf.{expand,fallback,once} -fmt cpio)
 
-ARCHIVEGEN_OPTIONS+=("${_optvars[@]}")
+[[ $_optrootfs ]] && _ag_opts+=(-rootfs "$_optrootfs")
+(( _optarchive )) && _ag_opts+=(-print)
 
-if (( _optarchive )); then
-	archivegen -rootfs "$_optrootfs" -print -elf.{expand,fallback,once} \
-		"${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
-elif (( ! _optnogen )); then
-	build_image "$_optgenimg" "$_optcompress" "$@"
+(( _optnogen )) && cleanup 0
+
+set -o pipefail
+
+if (( _optstdout )); then
+	archivegen "${_ag_opts[@]}" "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
+else
+	archivegen "${_ag_opts[@]}" "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" \
+		| "$_optcompress" "${_comp_opts[@]}" > "$_optgenimg"
+	(( $? )) && error "image generation failed"
 fi
 
-cleanup $(( !!_builderrors ))
+cleanup
