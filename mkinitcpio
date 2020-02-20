@@ -33,6 +33,9 @@ unset GREP_OPTIONS CDPATH "${!LIBMOUNT_@}"
 declare -i systemd fs_autodetect_failed=1
 declare -a fstypes
 
+# config
+declare -a ARCHIVEGEN_OPTIONS HOOKS COMPRESSION MODULES BINARIES FILES
+
 usage() { cat <<!
 mkinitcpio [OPTIONS...] [FILES...]
 Modular tool for building an initramfs images.
@@ -365,8 +368,6 @@ _f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
 
 source "$_f_config" || cleanup 1
 
-arrayize_config
-
 # after returning, hooks are populated into the array '_hooks'
 # HOOKS should not be referenced from here on
 compute_hookset
@@ -409,6 +410,8 @@ if (( ! _optstdout )); then
 	xz)
 		_comp_opts=('--check=crc32') ;;
 	esac
+
+	COMPRESSION=("$_optcompress")
 fi
 
 msg "$KERNELVERSION${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
@@ -439,7 +442,8 @@ done
 (( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
 (( _builderrors )) && cleanup 1
 
-load_config "$_f_config"
+HOOKS=("${_hooks[@]}")
+load_config
 
 trap -- RETURN
 set +o functrace
@@ -460,7 +464,7 @@ if (( _optstdout )); then
 else
 	archivegen "${_ag_opts[@]}" "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" \
 		| "$_optcompress" "${_comp_opts[@]}" > "$_optgenimg"
-	(( $? )) && error "image generation failed"
+	(( ! $? )) || error "image generation failed"
 fi
 
-cleanup
+cleanup $?

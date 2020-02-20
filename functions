@@ -209,16 +209,6 @@ map() {
 	return $r
 }
 
-# arrayize_config turns all config variables into bash arrays.
-arrayize_config() {
-	set -f
-	[[ ${MODULES@a} != *a* ]] && MODULES=($MODULES)
-	[[ ${BINARIES@a} != *a* ]] && BINARIES=($BINARIES)
-	[[ ${FILES@a} != *a* ]] && FILES=($FILES)
-	[[ ${HOOKS@a} != *a* ]] && HOOKS=($HOOKS)
-	set +f
-}
-
 # in_array searches ${@:2} for $1, returns true if found.
 in_array() {
 	local needle=$1; shift
@@ -511,38 +501,33 @@ add_binary() {
 # load_config adds all modules, binaries, files and the config into the image,
 # and embeds version information for archivegen and mkinitcpio.
 load_config() {
+	local mod
+	local -a mods
+
 	map add_module "${MODULES[@]}"
 	map add_binary "${BINARIES[@]}"
 	map add_file "${FILES[@]}"
 
 	add <<-?
-	f $1 buildconfig - 0 0
-
 	c version - - - <<!
 	archivegen: $(archivegen -version)
 	mkinitcpio: $version
 	!
 	?
 
-	# When MODULES is not an array (but instead implicitly converted at
-	# startup), sourcing the config causes the string value of MODULES
-	# to be assigned as MODULES[0]. Avoid this by explicitly unsetting
-	# MODULES before re-sourcing the config.
-	unset MODULES
-	source "$1"
-
-	# arrayize MODULES if necessary.
-	[[ ${MODULES@a} != *a* ]] && read -r -a MODULES <<<"${MODULES//-/_}"
+	add  'c buildconfig - - - <<!'
+	declare -p HOOKS COMPRESSION MODULES BINARIES FILES | add
+	add  '!'
 
 	for mod in "${MODULES[@]%\?}"; do
 		mod=${mod//-/_}
 		# only add real modules (2 == builtin)
-		(( _addedmodules["$mod"] == 1 )) && add+=("$mod")
+		(( _addedmodules["$mod"] == 1 )) && mods+=("$mod")
 	done
 
-	if (( ${#add[*]} )); then
+	if (( ${#mods[*]} )); then
 		add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
-		addf '%s\n' "${add[@]}"
+		addf '%s\n' "${mods[@]}"
 		add  '!'
 	fi
 
