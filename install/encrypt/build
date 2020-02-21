@@ -2,7 +2,7 @@
 build() {
 	run_build_hook dm
 
-	map add_module dm-{crypt,integrity}
+	add_module dm-{crypt,integrity}
 	add_all_modules /crypto/
 
 	add <<-!

@@ -10,7 +10,8 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 
 declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
-declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors _ag_opts _comp_opts
+declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors
+declare -a _ag_opts _comp_opts _add_modules
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
@@ -439,7 +440,9 @@ for hook in "${_hooks[@]}"; do
 	case $hook in autodetect) break ;; esac
 done
 
-(( ${#_fwerrors[@]} )) && warning 'possibly missing firmware: %s' "${_fwerrors[*]}"
+_add_module "${_add_modules[@]}" || cleanup 1
+
+(( ${#_fwerrors[@]} )) && warning 'missing firmware: %s' "${_fwerrors[*]}"
 (( _builderrors )) && cleanup 1
 
 HOOKS=("${_hooks[@]}")

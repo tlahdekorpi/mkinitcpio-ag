@@ -1,7 +1,7 @@
 #!/bin/bash
 build() {
 	run_build_hook dm
-	map add_module dm-{mod,snapshot,mirror,cache,cache-smq,thin-pool}
+	add_module dm-{mod,snapshot,mirror,cache,cache-smq,thin-pool}
 
 	add_udev_rule1 69-{dm-,}lvm-metad.rules
 	add_udev_rule1 11-dm-lvm.rules 56-lvm.rules

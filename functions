@@ -342,40 +342,30 @@ add_firmware() {
 	return $r
 }
 
-# add_module adds a kernel module $1 and all it's dependencies and firmware
-# to the image. ?-suffix ignores errors.
-add_module() {
-	local target module softdeps deps field value
-	local -a firmware
-	local -i ign_errors found
+_add_module() {
+	local m module softdeps deps field value
 
 	[[ $KERNELVERSION == none ]] && return 0
 
-	if [[ $1 = *\? ]]; then
-		ign_errors=1
-		set -- "${1%?}"
-	fi
-
-	target=${1%.ko*} target=${target//-/_}
-
-	# skip expensive stuff if this module has already been added
-	(( _addedmodules["$target"] > 0 )) && return
+	_add_modules=()
 
 	while IFS=':= ' read -r -d '' field value; do
 		case "$field" in
 		filename)
-			found=1
 			module=${value##*/} module=${module%.ko*}
 			debug "adding module: %s" "$module"
 			_modpaths["$value"]=1
 			_addedmodules["${module//-/_}"]=1
 			;;
+		alias)
+			_addedmodules["${value//-/_}"]=3
+			;;
 		depends)
 			IFS=',' read -r -a deps <<< "$value"
-			map add_module "${deps[@]}"
+			add_module "${deps[@]}"
 			;;
 		firmware)
-			firmware+=("$value")
+			add_firmware "$value" || _fwerrors+=("$value")
 			;;
 		softdep)
 			read -ra softdeps <<<"$value"
@@ -385,37 +375,63 @@ add_module() {
 			done
 			;;
 		esac
-	done < <(modinfo -b "$_optmoduleroot" -k "$KERNELVERSION" -0 "$target" 2>/dev/null)
+	done < <(modinfo -b "$_optmoduleroot" -k "$KERNELVERSION" -0 "${@%\?}" 2>/dev/null)
 
-	if (( !found )); then
-		(( ign_errors || _addedmodules["$target"] )) && return 0
-		error "module not found: '%s'" "$target"
+	for m in "${@//-/_}"; do
+		if [[ $m = *\? ]]; then
+			continue
+		fi
+
+		if (( _addedmodules[$m] > 0 )); then
+			continue
+		fi
+
+		error "module not found: %s" "$m"
 		return 1
+	done
+
+	if (( ! ${#_add_modules[@]} )); then
+		return
 	fi
 
-	if (( ${#firmware[*]} )); then
-		add_firmware "${firmware[@]}" || _fwerrors+=("$target")
-	fi
+	_add_module "${_add_modules[@]}"
+}
 
-	# handle module quirks
-	case $target in
-	fat)
-		add_module "nls_cp437?"
-		add_module "nls_iso8859-1?"
-		;;
-	ocfs2)
-		add_module "configfs?"
-		;;
-	btrfs)
-		add_module "libcrc32c?"
-		;;
-	f2fs)
-		add_module "crypto-crc32?"
-		;;
-	ext4)
-		add_module "crypto-crc32c?"
-		;;
-	esac
+# add_module adds a kernel modules $@ and all it's dependencies and firmware
+# to the image. ?-suffix ignores errors.
+add_module() {
+	local target mod
+
+	[[ $KERNELVERSION == none ]] && return 0
+
+	for target in "$@"; do
+		target=${target%.ko*}
+		target=${target//-/_}
+		mod=${target%\?}
+
+		(( _addedmodules[$mod] > 0 )) && continue
+		_add_modules+=("$target")
+
+		# handle module quirks
+		case $mod in
+		fat)
+			add_module 'nls_cp437?' 'nls_iso8859-1?'
+			;;
+		ocfs2)
+			add_module 'configfs?'
+			;;
+		btrfs)
+			add_module 'libcrc32c?'
+			;;
+		f2fs)
+			add_module 'crypto-crc32?'
+			;;
+		ext4)
+			add_module 'crypto-crc32c?'
+			;;
+		esac
+	done
+
 }
 
 addf() {
