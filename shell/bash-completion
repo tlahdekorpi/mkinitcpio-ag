@@ -8,7 +8,7 @@ _ls() {
 _mkinitcpio() {
 	local opt_short opt_long cur prev
 
-	opt_short=(A a M z c d f h H o k L r n N p R s S v V g X)
+	opt_short=(A a M z c d f h H o k K L r n N p R s S v V g X)
 	opt_long=(
 		add addhooks
 		archive
@@ -21,6 +21,7 @@ _mkinitcpio() {
 		hookhelp
 		hooks
 		kernel
+		kmod
 		listhooks
 		moduleroot
 		nocolor

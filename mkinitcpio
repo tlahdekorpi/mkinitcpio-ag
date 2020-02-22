@@ -11,8 +11,8 @@ _d_firmware=(/usr/lib/firmware{,/updates})
 declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors
-declare -a _ag_opts _comp_opts _add_modules
-declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks
+declare -a _ag_opts _comp_opts _add_modules _optkmods
+declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks _addmodule
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
 declare -i _optstdout=1
@@ -41,7 +41,8 @@ usage() { cat <<!
 mkinitcpio [OPTIONS...] [FILES...]
 Modular tool for building an initramfs images.
 
-STDIN and FILES are forwarded to archivegen, HOOKS are comma separated.
+STDIN and FILES are forwarded to archivegen.
+HOOKS and MODULES are comma separated.
 
 Options:
   -h --help              Show this help text
@@ -66,6 +67,7 @@ Options:
   -s --save              Save the build directory
   -z --compress PROGRAM  Compress image with PROGRAM
   -k --kernel VERSION    Use kernel VERSION
+  -K --kmod MODULES      Append kernel MODULES
   -X KEY=VALUE           Variable used by archivegen
 !
 }
@@ -193,7 +195,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dfhH:o:k:Lr:nNp:R:sS:vVg:X:
+_opt_short=A:aMz:c:dfhH:o:k:K:Lr:nNp:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -206,6 +208,7 @@ _opt_long=(
 	hookhelp:
 	hooks:
 	kernel:
+	kmod:
 	listhooks
 	moduleroot:
 	nocolor
@@ -256,6 +259,12 @@ while :; do
 	-k|--kernel)
 		shift
 		KERNELVERSION=$1
+		;;
+	-K|--kmod)
+		shift
+		IFS=, read -r -a add <<< "$1"
+		_optkmods+=("${add[@]}")
+		unset add
 		;;
 	-s|--save)
 		_optsavetree=1
@@ -440,13 +449,15 @@ for hook in "${_hooks[@]}"; do
 	case $hook in autodetect) break ;; esac
 done
 
+add_module "${_optkmods[@]}"
+
+HOOKS=("${_hooks[@]}")
+load_config
+
 _add_module "${_add_modules[@]}" || cleanup 1
 
 (( ${#_fwerrors[@]} )) && warning 'missing firmware: %s' "${_fwerrors[*]}"
 (( _builderrors )) && cleanup 1
-
-HOOKS=("${_hooks[@]}")
-load_config
 
 trap -- RETURN
 set +o functrace

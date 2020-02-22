@@ -407,7 +407,11 @@ add_module() {
 	for target in "$@"; do
 		target=${target%.ko*}
 		target=${target//-/_}
+
 		mod=${target%\?}
+
+		(( _addmodule[$mod] )) && continue
+		_addmodule[$mod]=1
 
 		(( _addedmodules[$mod] > 0 )) && continue
 		_add_modules+=("$target")

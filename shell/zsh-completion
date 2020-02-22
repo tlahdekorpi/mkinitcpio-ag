@@ -32,5 +32,6 @@ _arguments \
 {-s,--save}'[Save the build directory]' \
 {-z,--compress}'[Compress image with program]' \
 {-k,--kernel}'[Use kernel version]:versions:_find_kernel_versions' \
+{-K,--kmod}'[Append kernel modules]' \
 '-X[Variable used by archivegen]' \
 '*:files:_files'
