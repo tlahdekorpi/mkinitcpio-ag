@@ -57,9 +57,6 @@ fsck_root
 run_hookfunctions 'run_latehook' 'late hook' $LATEHOOKS
 run_hookfunctions 'run_cleanuphook' 'cleanup hook' $CLEANUPHOOKS
 
-udevadm control --exit
-udevadm info --cleanup-db
-
 if [ "$(stat -c %D /)" = "$(stat -c %D /sysroot)" ]; then
     # Nothing got mounted on /sysroot. This is the end, we don't know what to do anymore
     # We fall back into a shell, but the shell has now PID 1
@@ -68,7 +65,9 @@ if [ "$(stat -c %D /)" = "$(stat -c %D /sysroot)" ]; then
     echo "Bailing out, you are on your own. Good luck."
     echo
     launch_interactive_shell --exec
-elif [ ! -x "/sysroot${init}" ]; then
+fi
+
+if [ ! -L "/sysroot${init}" ] && [ ! -x "/sysroot${init}" ]; then
     # Successfully mounted /sysroot, but ${init} is missing
     # The same logic as above applies
     err "Root device mounted successfully, but ${init} does not exist."
@@ -81,6 +80,9 @@ if [ "${break}" = "postmount" ]; then
     echo ":: Post-mount break requested, type 'exit' to resume operation"
     launch_interactive_shell
 fi
+
+udevadm control --exit
+udevadm info --cleanup-db
 
 # this should always be the last thing we do before the switch_root.
 rdlogger_stop
