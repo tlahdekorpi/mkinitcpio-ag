@@ -184,10 +184,34 @@ hook_list() {
 }
 
 compute_hookset() {
-	for h in "${HOOKS[@]}" "${_optaddhooks[@]}"; do
+	local -a hooks
+	local h
+
+	if (( $# )); then
+		hooks=("$@")
+	else
+		hooks=("${HOOKS[@]}" "${_optaddhooks[@]}")
+	fi
+
+	(( ${#hooks[@]} )) || return 1
+
+	for h in "${hooks[@]}"; do
 		in_array "$h" "${_optskiphooks[@]}" && continue
+
+		case $h in
+		autodetect)
+			_hooks=($h "${_hooks[@]}")
+			continue
+			;;
+		systemd)
+			systemd=1
+			;;
+		esac
+
 		_hooks+=("$h")
 	done
+
+	HOOKS=()
 }
 
 source "$_f_functions"
@@ -380,12 +404,9 @@ source "$_f_config" || cleanup 1
 
 # after returning, hooks are populated into the array '_hooks'
 # HOOKS should not be referenced from here on
-compute_hookset
-
-(( ${#_opthooks[@]} )) && _hooks=("${_opthooks[@]}")
-(( ${#_hooks[*]} )) || die 'no hooks'
-
-in_array systemd "${_hooks[@]}" && systemd=1
+if ! compute_hookset "${_opthooks[@]}"; then
+	die 'no hooks'
+fi
 
 if (( _optshowautomods )); then
 	PATH=$_d_install source 'autodetect'
@@ -451,7 +472,6 @@ done
 
 add_module "${_optkmods[@]}"
 
-HOOKS=("${_hooks[@]}")
 load_config
 
 _add_module "${_add_modules[@]}" || cleanup 1

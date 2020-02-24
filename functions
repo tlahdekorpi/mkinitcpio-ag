@@ -646,6 +646,7 @@ run_build_hook() {
 	done
 
 	cd "$OPWD"
+	HOOKS+=("$hook")
 }
 
 install_modules() {
