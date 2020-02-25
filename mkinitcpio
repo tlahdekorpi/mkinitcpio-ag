@@ -456,6 +456,10 @@ if [[ -r $_d_kmoduledir/modules.builtin ]]; then
 	unset modname path
 fi
 
+if [[ -r $_d_kmoduledir/modules.builtin.modinfo ]]; then
+	add_builtin_modinfo < "$_d_kmoduledir/modules.builtin.modinfo"
+fi
+
 # set functrace and trap to catch errors in add_* functions
 declare -i _builderrors=0
 set -o functrace

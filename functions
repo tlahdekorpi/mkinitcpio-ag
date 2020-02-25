@@ -342,6 +342,25 @@ add_firmware() {
 	return $r
 }
 
+add_builtin_modinfo() {
+	local module softdeps field value
+
+	while IFS=':= ' read -r -d '' field value; do
+		case "$field" in
+		*.firmware)
+			add_firmware "$value" || _fwerrors+=("$value")
+			;;
+		*.softdep)
+			read -ra softdeps <<<"$value"
+			for module in "${softdeps[@]}"; do
+			[[ $module == *: ]] && continue
+			add_module "$module?"
+			done
+			;;
+		esac
+	done
+}
+
 _add_module() {
 	local m module softdeps deps field value
 
