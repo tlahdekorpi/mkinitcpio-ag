@@ -657,8 +657,10 @@ install_modules() {
 		return 0
 	fi
 
-	add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} usr 0 0"
-	addf 'f /usr%s\n' "$@"
+	add 'mr - .*lib/modules/ usr/lib/modules/'
+	add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} - 0 0"
+	addf 'f %s\n' "$@"
+	add 'mc -'
 }
 
 try_enable_color() {
