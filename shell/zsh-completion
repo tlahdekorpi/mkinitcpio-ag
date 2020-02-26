@@ -33,5 +33,6 @@ _arguments \
 {-z,--compress}'[Compress image with program]' \
 {-k,--kernel}'[Use kernel version]:versions:_find_kernel_versions' \
 {-K,--kmod}'[Append kernel modules]' \
+{-F,--firmware}'[Use path as firmware search path]' \
 '-X[Variable used by archivegen]' \
 '*:files:_files'

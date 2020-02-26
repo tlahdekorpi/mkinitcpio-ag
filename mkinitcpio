@@ -6,11 +6,11 @@ declare -r version=%VERSION%
 # globals within mkinitcpio, but not intended to be used by hooks.
 _f_functions=/usr/lib/mkinitcpio/functions
 _d_config=/etc/mkinitcpio:/usr/lib/mkinitcpio
-_d_firmware=(/usr/lib/firmware{,/updates})
+_d_firmware=/usr/lib/firmware
 
 declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
-declare -a _hooks _opthooks _optskiphooks _optaddhooks _fwerrors
+declare -a _hooks _opthooks _optskiphooks _optaddhooks _firmware
 declare -a _ag_opts _comp_opts _add_modules _optkmods
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks _addmodule
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
@@ -68,6 +68,7 @@ Options:
   -z --compress PROGRAM  Compress image with PROGRAM
   -k --kernel VERSION    Use kernel VERSION
   -K --kmod MODULES      Append kernel MODULES
+  -F --firmware PATH     Use PATH as firmware search path
   -X KEY=VALUE           Variable used by archivegen
 !
 }
@@ -219,7 +220,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dfhH:o:k:K:Lr:nNp:R:sS:vVg:X:
+_opt_short=A:aMz:c:dF:fhH:o:k:K:Lr:nNp:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -227,6 +228,7 @@ _opt_long=(
 	compress:
 	config:
 	debug
+	firmware:
 	force
 	help
 	hookhelp:
@@ -325,6 +327,10 @@ while :; do
 		IFS=, read -r -a skip <<< "$1"
 		_optskiphooks+=("${skip[@]}")
 		unset skip
+		;;
+	-F|--firmware)
+		shift
+		_d_firmware="$1"
 		;;
 	-H|--hookhelp)
 		shift
@@ -474,13 +480,12 @@ for hook in "${_hooks[@]}"; do
 	case $hook in autodetect) break ;; esac
 done
 
-add_module "${_optkmods[@]}"
-
 load_config
 
+add_module "${_optkmods[@]}"
 _add_module "${_add_modules[@]}" || cleanup 1
+add_firmware "${_firmware[@]}"
 
-(( ${#_fwerrors[@]} )) && warning 'missing firmware: %s' "${_fwerrors[*]}"
 (( _builderrors )) && cleanup 1
 
 trap -- RETURN

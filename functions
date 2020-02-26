@@ -329,17 +329,18 @@ add_checked_modules() {
 
 # add_firmware adds all firmware $@ found in _d_firmware to the image.
 add_firmware() {
-	local r=1
+	local fw p
+
+	[[ $KERNELVERSION == none ]] && return
 
 	for fw in "$@"; do
-		for fwpath in "${_d_firmware[@]}"; do
-			[[ -f $fwpath/$fw ]] || continue
-			add "f $fwpath/$fw"; r=0
-			break
+		for p in "$_d_firmware"{/updates,}; do
+			[[ -f "$p/$fw" ]] || continue
+			add "f $p/$fw usr/lib/firmware/$fw"
+			continue 2
 		done
+		warning 'missing firmware: %s' "$fw"
 	done
-
-	return $r
 }
 
 add_builtin_modinfo() {
@@ -348,7 +349,7 @@ add_builtin_modinfo() {
 	while IFS=':= ' read -r -d '' field value; do
 		case "$field" in
 		*.firmware)
-			add_firmware "$value" || _fwerrors+=("$value")
+			_firmware+=("$value")
 			;;
 		*.softdep)
 			read -ra softdeps <<<"$value"
@@ -384,7 +385,7 @@ _add_module() {
 			add_module "${deps[@]}"
 			;;
 		firmware)
-			add_firmware "$value" || _fwerrors+=("$value")
+			_firmware+=("$value")
 			;;
 		softdep)
 			read -ra softdeps <<<"$value"
