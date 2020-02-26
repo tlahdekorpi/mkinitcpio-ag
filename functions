@@ -717,18 +717,9 @@ add_udev_rule1() {
 }
 
 add_udev_rule() {
-	local -a rules
+	(( ! $# )) && return 1
 
-	mapfile -t rules < <(PATH="$_optrootfs"/usr/lib/udev/rules.d type -P "$@")
-	if (( ${#rules[@]} != $# )); then
-		error "missing udev rules: %s" "$*"
-		return 1
-	fi
-
-	(( ! ${#rules[@]} )) && return
-
-	addf 'fr %s\n' "${rules[@]##$_optrootfs}"
-
+	addf 'fr /usr/lib/udev/rules.d/%s\n' "$@"
 	awk -F, -- '
 	/^#|^$/ {next}
 	{
@@ -749,7 +740,7 @@ add_udev_rule() {
 		else
 			printf "L %s\n", x
 	}
-	}' "${rules[@]}" | add
+	}' "${@/#/$_optrootfs/usr/lib/udev/rules.d/}" | add
 }
 
 add_systemd_unit1() {
@@ -770,19 +761,16 @@ add_systemd_unit1() {
 }
 
 add_systemd_unit() {
-	(( ! systemd )) && return
-
 	local -a units next reqs
 	local req
 
-	mapfile -t units < <(PATH="$_optrootfs"/usr/lib/systemd/system type -P "$@")
-	if (( ${#units[@]} != $# )); then
-		error "missing systemd units: %s" "$*"
-		return 1
-	fi
+	(( ! systemd )) && return
+	(( ! $# )) && return
 
-	(( ! ${#units[@]} )) && return
+	addf 'gr /usr/lib/systemd/system/*.wants/%s - 0 0\n' "$@"
+	addf 'fr /usr/lib/systemd/system/%s\n' "$@"
 
+	units=("${@/#/$_optrootfs/usr/lib/systemd/system/}")
 	mapfile -t next < <(
 		awk -v archive="$BUILDARCHIVE" -F= -- '
 		/^(#|;)/ {next}
@@ -821,9 +809,6 @@ add_systemd_unit() {
 		next+=("${req##*/}")
 		addf 'gr %s - 0 0\n' "${req##$_optrootfs}"
 	done
-
-	addf 'gr /usr/lib/systemd/system/*.wants/%s - 0 0\n' "${units[@]##*/}"
-	addf 'fr %s\n' "${units[@]##$_optrootfs}"
 
 	add_systemd_unit "${next[@]}"
 }
