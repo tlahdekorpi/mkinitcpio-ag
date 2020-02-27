@@ -29,7 +29,4 @@ build() {
 	!
 }
 
-help() { cat <<!
-This will install the included init and a busybox enviroment.
-!
-}
+help() { echo 'mkinitcpio /init, see mkinitcpio.init(5).'; }
