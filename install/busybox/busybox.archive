@@ -4,6 +4,7 @@ l busybox usr/bin/{
 	[[
 	ash
 	awk
+	bzip2
 	cat
 	chmod
 	chown
@@ -20,6 +21,7 @@ l busybox usr/bin/{
 	find
 	free
 	grep
+	gzip
 	head
 	hostname
 	id
