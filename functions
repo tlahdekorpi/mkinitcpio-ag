@@ -479,12 +479,11 @@ add_full_dir() {
 }
 
 add_file() {
-	p="${1##$_optrootfs}"
-	add "fr $p $2 $3"
+	add "fr $*"
 }
 
-add_afile() {
-	add "f $1 $2 $3"
+add_file_abs() {
+	add "f $*"
 }
 
 # add_runscript adds the runtime script for the calling hook to the image.
