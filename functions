@@ -478,13 +478,6 @@ add_full_dir() {
 	add "Rr $1 $1 0 0"
 }
 
-add_symlink() {
-	p="${1##$_optrootfs}"
-	pl="$(readlink -f $1)"
-	pl="${pl##$_optrootfs}"
-	add "l ${2:-$pl} $p"
-}
-
 add_file() {
 	p="${1##$_optrootfs}"
 	add "fr $p $2 $3"
