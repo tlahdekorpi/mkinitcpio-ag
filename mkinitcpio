@@ -14,7 +14,7 @@ declare -a _hooks _opthooks _optskiphooks _optaddhooks _firmware
 declare -a _ag_opts _comp_opts _add_modules _optkmods
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks _addmodule
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
-declare -i _optforce _optquiet _optdebug _optcolor _opthooklist _optnogen
+declare -i _optforce _optquiet _optdebug _opthooklist _optnogen
 declare -i _optstdout=1
 
 _devel=1
@@ -60,7 +60,6 @@ Options:
   -S --skiphooks HOOKS   Omit running HOOKS
   -H --hookhelp HOOK     Show help for HOOK
   -L --listhooks         Show all hooks
-  -n --nocolor           Disable colorized output messages
   -M --automods          Show modules found by autodetect
   -r --moduleroot DIR    Use DIR as filesystem root for /lib/modules
   -R --rootfs DIR        Use alternate system root
@@ -173,14 +172,14 @@ hook_list() {
 				continue
 			fi
 
-			msgul "${hook##*/}"
+			msg "${hook##*/}:"
 			hook_help "${hook##*/}" | awk '{print "  ", $0} END{print ""}'
 		done
 	done
 
 	(( ! ${#depr[*]} )) && return
 
-	msgul '\nDEPRECATED'
+	msg '\nDEPRECATED:'
 	printf '%s\n' "${depr[@]}" | sort -u | column -c"${COLUMNS:-$(tput cols)}"
 }
 
@@ -220,7 +219,7 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dF:fhH:o:k:K:Lr:nNp:R:sS:vVg:X:
+_opt_short=A:aMz:c:dF:fhH:o:k:K:Lr:Np:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
@@ -237,7 +236,6 @@ _opt_long=(
 	kmod:
 	listhooks
 	moduleroot:
-	nocolor
 	nogen
 	path:
 	rootfs:
@@ -309,9 +307,6 @@ while :; do
 		version
 		cleanup 0
 		;;
-	-n|--nocolor)
-		_optcolor=1
-		;;
 	-N|--nogen)
 		_optnogen=1
 		;;
@@ -371,16 +366,14 @@ done
 
 _d_install=${_d_config//://install:}/install
 
-if [[ -t 1 ]] && (( ! _optcolor )); then
-	try_enable_color
-fi
-
 if [[ $_opthookhelp ]]; then
+	_optquiet=1
 	hook_help "$_opthookhelp"
 	exit 0
 fi
 
 if (( _opthooklist )); then
+	_optquiet=1
 	hook_list
 	exit 0
 fi

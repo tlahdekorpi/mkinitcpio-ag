@@ -25,7 +25,6 @@ _arguments \
 {-S,--skiphooks}'[Omit running hooks]:hooks:_hooks' \
 {-H,--hookhelp}'[Show help for hook]:hooks:_hooks' \
 {-L,--listhooks}'[Show all hooks]' \
-{-n,--nocolor}'[Disable colorized output messages]' \
 {-M,--automods}'[Show modules found by autodetect]' \
 {-r,--moduleroot}'[Use dir as filesystem root for /lib/modules]' \
 {-R,--rootfs}'[Use alternate system root]' \

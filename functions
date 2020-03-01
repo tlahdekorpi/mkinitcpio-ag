@@ -178,14 +178,6 @@ msg3() {
 	(( ! _optquiet )) || printf "    $1\n" "${@:2}" >&2
 }
 
-msgul() {
-	printf "${_color_ul}$1${_color_none}\n" "${@:2}"
-}
-
-msgbl() {
-	printf "${_color_bold}$1${_color_none} $2\n" "${@:3}" >&2
-}
-
 warning() {
 	printf "warning: $1\n" "${@:2}" >&2
 }
@@ -673,25 +665,6 @@ install_modules() {
 	add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} - 0 0"
 	addf 'f %s\n' "$@"
 	add 'mc -'
-}
-
-try_enable_color() {
-	local colors
-
-	if ! colors=$(tput colors 2>/dev/null); then
-		warning "Failed to enable color. Check your TERM environment variable"
-		return
-	fi
-
-	if (( colors > 0 )) && tput setaf 0 &>/dev/null; then
-		_color_none=$(tput sgr0)
-		_color_bold=$(tput bold)
-		_color_blue=$_color_bold$(tput setaf 4)
-		_color_green=$_color_bold$(tput setaf 2)
-		_color_red=$_color_bold$(tput setaf 1)
-		_color_yellow=$_color_bold$(tput setaf 3)
-		_color_ul=$(tput smul)
-	fi
 }
 
 add_udev_rule1() {
