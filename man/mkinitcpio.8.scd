@@ -22,6 +22,9 @@ initramfs images that allows for easy extension with hooks.
 *-a, --archive*
 	Show the generated image in *archivegen* format.
 
+*-b, --base64*
+	When used with *--archive* all inlined files (create types) are base64 encoded.
+
 *-c, --config=*
 	Alternate *mkinitcpio*(5) config file.
 

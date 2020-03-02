@@ -68,6 +68,7 @@ Options:
   -k --kernel VERSION    Use kernel VERSION
   -K --kmod MODULES      Append kernel MODULES
   -F --firmware PATH     Use PATH as firmware search path
+  -b --base64            Pass -b64 to archivegen
   -X KEY=VALUE           Variable used by archivegen
 !
 }
@@ -219,11 +220,12 @@ source "$_f_functions"
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-_opt_short=A:aMz:c:dF:fhH:o:k:K:Lr:Np:R:sS:vVg:X:
+_opt_short=A:aMbz:c:dF:fhH:o:k:K:Lr:Np:R:sS:vVg:X:
 _opt_long=(
 	add: addhooks:
 	archive
 	automods
+	base64
 	compress:
 	config:
 	debug
@@ -351,6 +353,9 @@ while :; do
 		*+) _d_config=$(realpath ${1%%+}):$_d_config ;;
 		*) _d_config=$(realpath $1) ;;
 		esac
+		;;
+	-b|--base64)
+		_ag_opts+=(-b64)
 		;;
 	-X)
 		shift

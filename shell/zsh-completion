@@ -33,5 +33,6 @@ _arguments \
 {-k,--kernel}'[Use kernel version]:versions:_find_kernel_versions' \
 {-K,--kmod}'[Append kernel modules]' \
 {-F,--firmware}'[Use path as firmware search path]' \
+{-b,--base64}'[Pass -b64 to archivegen]' \
 '-X[Variable used by archivegen]' \
 '*:files:_files'
