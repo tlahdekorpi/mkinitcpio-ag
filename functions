@@ -755,10 +755,23 @@ add_systemd_unit() {
 		}
 
 		END {
-			for (x in dep) printf "%s\n", x
-			for (x in bin)
-				if (x !~ "^(/usr|)/bin/sh$")
+			for (x in dep)
+				printf "%s\n", x
+
+			for (x in bin) {
+				if (x ~ "^(/usr|)/bin/sh$")
+					continue
+
+				if (x == "sh")
+					continue
+
+				if (x ~ "^/") {
 					printf "L %s\n", x >> archive
+					continue
+				}
+
+				printf "L /usr/(s|)bin/%s\n", x >> archive
+			}
 		}
 		' "${units[@]}"
 	)
