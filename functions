@@ -582,7 +582,7 @@ find_script() {
 }
 
 run_build_hook() {
-	local hook=$1 script resolved OPWD
+	local hook=$1 script resolved head OPWD
 	local -a scripts
 
 	(( _built_hooks["$hook"] )) && return 0
@@ -631,6 +631,12 @@ run_build_hook() {
 			continue
 			;;
 		esac
+
+		read -r -n 9 head < "$x"
+		if [[ "$head" == '#!archive' ]]; then
+			add < "$x"
+			continue
+		fi
 
 		unset -f build
 		if ! source "$x"; then
