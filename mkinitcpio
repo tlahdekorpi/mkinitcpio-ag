@@ -119,69 +119,45 @@ resolve_kernver() {
 	return 1
 }
 
-hook_help() {
-	local resolved script hook=$1
-
-	if ! script=$(find_script $hook); then
-		error 'no such hook: %s' "$hook"
-		return 1
-	fi
-
-	[[ -d "$script" ]] && script+=/build
-
-	# this will be true for broken symlinks as well
-	if [[ -z $script ]]; then
-		error "no such hook: %s" "$hook"
-		return 1
-	fi
-
-
-	# deprecated hooks are symlinks to the replacement
-	resolved=$(realpath "$script")
-	if [[ "$script" != "$resolved" ]]; then
-		warning "'%s' hook has been deprecated by '%s'" "$hook" "${resolved##*/}"
-		script=$resolved
-	fi
-
-	source "$script"
-	if ! declare -f help >/dev/null; then
-		error 'missing help function: %s' "$hook"
-		return 1
-	fi
-
-	help
-	unset help
-}
-
 hook_list() {
-	local resolved
-	local -a paths hooklist depr
+	local -a paths
+	if (( $# )); then
+		read -ra paths < <(find_script "$1")
+	else
+		IFS=: read -ra paths <<< "$_d_install"
+	fi
 
-	IFS=: read -ra paths <<< "$_d_install"
+	if ! (( ${#paths[@]} )); then
+		error 'no hooks'
+		return 1
+	fi
 
-	for path in "${paths[@]}"; do
-		for hook in "$path"/*; do
-			[[ -e $hook || -L $hook ]] || continue
+	find "${paths[@]}" -type f -regextype posix-extended \
+		-regex '.*/install/([[:alpha:]]+|.*/build)$' \
+		-exec awk '
+			!/^#/ {
+				if (nl)	print ""
+				nl=0
+				nextfile
+			}
 
-			# handle deprecated hooks and point to replacement
-			if resolved=$(realpath "$hook") && [[ ${hook##*/} != "${resolved##*/}" ]]; then
-				resolved=${resolved##*/}
-				if ! index_of "$resolved" "${depr[@]}"; then
-					# deprecated hook
-					depr+=("${hook##*/}")
-				fi
-				continue
-			fi
+			FNR == 1 {
+				sub("/build$", "", FILENAME)
+				match(FILENAME, ".*install/")
 
-			msg "${hook##*/}:"
-			hook_help "${hook##*/}" | awk '{print "  ", $0} END{print ""}'
-		done
-	done
+				f = substr(FILENAME, RLENGTH+1)
+				if (added[f])
+					nextfile
 
-	(( ! ${#depr[*]} )) && return
+				added[f]=1
+				print f
+			}
 
-	msg '\nDEPRECATED:'
-	printf '%s\n' "${depr[@]}" | sort -u | column -c"${COLUMNS:-$(tput cols)}"
+			FNR  > 1 {
+				printf " %s\n", substr($0, 2)
+				nl=1
+			}
+		' {} +
 }
 
 compute_hookset() {
@@ -372,15 +348,13 @@ done
 _d_install=${_d_config//://install:}/install
 
 if [[ $_opthookhelp ]]; then
-	_optquiet=1
-	hook_help "$_opthookhelp"
-	exit 0
+	hook_list "$_opthookhelp"
+	exit
 fi
 
 if (( _opthooklist )); then
-	_optquiet=1
 	hook_list
-	exit 0
+	exit
 fi
 
 # insist that /proc and /dev be mounted (important for chroots)
