@@ -582,7 +582,7 @@ find_script() {
 }
 
 run_build_hook() {
-	local hook=$1 script resolved head OPWD
+	local hook=$1 script head OPWD
 	local -a scripts
 
 	(( _built_hooks["$hook"] )) && return 0
@@ -591,13 +591,6 @@ run_build_hook() {
 	if ! script=$(find_script $hook); then
 		error 'no such hook: %s' "$hook"
 		return 1
-	fi
-
-	# deprecated hooks are symlinks to the replacement
-	resolved=$(realpath "$script")
-	if [[ "$script" != "$resolved" ]]; then
-		warning "'%s' hook has been deprecated by '%s'" "$hook" "${resolved##*/}"
-		script=$resolved
 	fi
 
 	OPWD="$PWD"

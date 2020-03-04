@@ -326,8 +326,8 @@ while :; do
 	-p|--path)
 		shift
 		case $1 in
-		*+) _d_config=$(realpath ${1%%+}):$_d_config ;;
-		*) _d_config=$(realpath $1) ;;
+		*+) _d_config="${1%%+}:$_d_config" ;;
+		*) _d_config="$1" ;;
 		esac
 		;;
 	-b|--base64)
