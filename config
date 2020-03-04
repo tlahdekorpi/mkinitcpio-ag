@@ -9,7 +9,7 @@ HOOKS=(
 	keyboard
 	modconf
 	fsck
-	# mdadm
+	# mdraid
 	# lvm
 )
 
