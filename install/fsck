@@ -1,4 +1,10 @@
 #!/bin/bash
+# fsck(8) and filesystem specific helpers.
+# fsck.mode= can be used on the kernel command line to control behaviour.
+#  "force" unconditionally performs a full filesystem check.
+#  "skip" skips all filesystem checks.
+# 
+# Additional parameters are understood by systemd, see systemd-fsck@.service(8).
 build() {
 	local f
 
@@ -29,17 +35,4 @@ build() {
 	done
 
 	add_binary "/usr/sbin/fsck"
-}
-
-help() { cat <<!
-This hook provides fsck and filesystem specific helpers to perform an fsck
-operation on the root device prior to mounting. If the autodetect hook is used,
-only the fsck helper specific to your filesystem will be added to the image. It
-is highly recommended that if you include this hook that you also include any
-necessary modules to ensure your keyboard will work in early userspace.
-
-To control the behavior of fsck on bootup, fsck.mode=force can be passed on
-the kernel command line to insist on running a full filesystem check. Similarly
-fsck.mode=skip can be passed to cause fsck not to run at all.
-!
 }

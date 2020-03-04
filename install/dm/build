@@ -1,11 +1,7 @@
 #!/bin/bash
+# device-mapper udev rules.
 build() {
 	add_udev_rule1 {10,55}-dm.rules
 	add_udev_rule1 13-dm-disk.rules 60-persistent-storage-dm.rules
 	add_udev_rule 95-dm-notify.rules
-}
-
-help() { cat <<!
-dm
-!
 }

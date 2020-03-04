@@ -1,4 +1,5 @@
 #!/bin/bash
+# systemd(1) as /init.
 build() {
 	local -a units
 
@@ -63,13 +64,4 @@ build() {
 	add <<-!
 	f $PWD/{break,sysroot}-generator usr/lib/systemd/system-generators 0755
 	!
-}
-
-help() { cat <<!
-This will install a basic systemd setup in your initramfs, and is meant to
-replace the 'init', 'usr', 'udev' and 'resume' hooks. Other hooks with runtime
-components will need to be ported, and will not work as intended. You also may
-wish to still include the 'base' hook (before this hook) to ensure that a
-rescue shell exists on your initramfs.
-!
 }

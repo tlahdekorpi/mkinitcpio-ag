@@ -1,10 +1,3 @@
-#!/bin/bash
-build() {
-	add 'gr /{etc,usr/lib}/modprobe.d/*.conf - 0 0'
-}
-
-help() { cat <<!
-This hook installs modprobe configuration files from /etc/modprobe.d and
-/usr/lib/modprobe.d.
-!
-}
+#!archive
+# modprobe.d(5) configuration files.
+gr /{etc,usr/lib}/modprobe.d/*.conf - 0 0

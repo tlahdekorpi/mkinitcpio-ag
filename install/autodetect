@@ -1,4 +1,7 @@
 #!/bin/bash
+# Perform auto-detection of kernel modules via sysfs to reduce the included
+# kernel modules to only those needed for booting. Be sure to verify the
+# included modules are correct and none are missing.
 build() {
 	local p fstype
 
@@ -35,13 +38,4 @@ build() {
 	if (( ${#_autodetect_cache[*]} )); then
 		debug 'caching %d modules' "${#_autodetect_cache[*]}"
 	fi
-}
-
-help() { cat <<!
-This hook shrinks your initramfs to a smaller size by autodetecting the needed
-modules. Be sure to verify included modules are correct and none are missing.
-This hook must be run before other subsystem hooks in order to take advantage
-of auto-detection.  Any hooks placed before 'autodetect' will be installed in
-full.
-!
 }

@@ -1,12 +1,9 @@
 #!/bin/bash
+# mdraid modules, mdadm(8) and mdadm.conf(5).
+
 build() {
 	add_checked_modules -f 'dm-' 'drivers/md/*'
-	add '?fr /etc/mdadm.conf'
 	add_udev_rule 63-md-raid-arrays.rules 64-md-raid-assembly.rules
 	add_udev_rule1 65-md-incremental.rules
-}
-
-help() { cat <<!
-mdraid modules and mdadm.
-!
+	add '?fr /etc/mdadm.conf'
 }

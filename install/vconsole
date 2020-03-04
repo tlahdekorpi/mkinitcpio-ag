@@ -1,4 +1,5 @@
 #!/bin/bash
+# vconsole.conf(5), keymaps and font.
 add_keymap_file() {
 	local f c inc
 
@@ -42,10 +43,4 @@ build() {
 		*) add_consolefont_file "$f" ;;
 		esac
 	done
-}
-
-help() { cat <<!
-This hook adds the keymap(s) and font specified in vconsole.conf to the image and
-loads them during early userspace.
-!
 }

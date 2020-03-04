@@ -1,4 +1,6 @@
 #!/bin/bash
+# systemd-cryptsetup-generator(8) and crypto modules.
+# /etc/cryptsetup.initramfs is included as etc/crypttab if it exists.
 build() {
 	run_build_hook dm
 
@@ -19,9 +21,4 @@ build() {
 
 	?fr /etc/crypttab.initramfs etc/crypttab
 	!
-}
-
-help() { cat <<!
-encrypt
-!
 }
