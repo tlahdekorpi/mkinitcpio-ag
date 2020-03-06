@@ -343,6 +343,9 @@ add_builtin_modinfo() {
 		*.firmware)
 			_firmware+=("$value")
 			;;
+		*.alias)
+			_addedmodules["${value//-/_}"]=3
+			;;
 		*.softdep)
 			read -ra softdeps <<<"$value"
 			for module in "${softdeps[@]}"; do
@@ -363,9 +366,13 @@ _add_module() {
 
 	while IFS=':= ' read -r -d '' field value; do
 		case "$field" in
+		name)
+			debug "module:   %s" "$value"
+			;;
 		filename)
+			debug "filename: %s" "$value"
+			[[ "$value" == '(builtin)' ]] && continue
 			module=${value##*/} module=${module%.ko*}
-			debug "adding module: %s" "$module"
 			_modpaths["$value"]=1
 			_addedmodules["${module//-/_}"]=1
 			;;
@@ -394,7 +401,7 @@ _add_module() {
 			continue
 		fi
 
-		if (( _addedmodules[$m] > 0 )); then
+		if (( _addedmodules[$m] )); then
 			continue
 		fi
 
@@ -444,7 +451,6 @@ add_module() {
 			;;
 		esac
 
-		(( _addedmodules[$mod] > 0 )) && continue
 		_add_modules+=("$target")
 	done
 
