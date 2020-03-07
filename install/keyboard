@@ -8,7 +8,7 @@ build() {
 
 	# As of 3.5, modaliases seem to be exported for HID
 	# devices, so we can leverage autodetection.
-	IFS=.- read -r major minor _ <<< "$KERNELVERSION"
+	IFS=.- read -r major minor _ <<< "$kernel"
 	if (( major > 3 || (major == 3 && minor >= 5) )); then
 		add_checked_modules '/hid/hid'
 	else

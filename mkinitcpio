@@ -29,7 +29,7 @@ export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 unset GREP_OPTIONS CDPATH "${!LIBMOUNT_@}"
 
 # globals within mkinitcpio, intended to be used by hooks.
-declare init
+declare init kernel
 declare -i fs_autodetect_failed=1
 declare -a fstypes
 
@@ -95,27 +95,28 @@ cleanup() {
 	exit "$err"
 }
 
-resolve_kernver() {
-	local kernel=$1 arch
+resolve_kernel() {
+	local k=$1
 
-	if [[ -z $kernel ]]; then
-		uname -r
+	case $k in none|-) unset kernel; return 1 ;; esac
+
+	if [[ -z $k ]]; then
+		kernel="$(uname -r)"
 		return 0
 	fi
 
-	if [[ ${kernel:0:1} != / ]]; then
-		echo "$kernel"
+	if [[ ${k:0:1} != / ]]; then
+		kernel="$k"
 		return 0
 	fi
 
-	if [[ ! -e $kernel ]]; then
-		error "no such file: %s" "$kernel"
-		return 1
+	if [[ ! -e $k ]]; then
+		die "no such file: %s" "$k"
 	fi
 
-	kver "$kernel" && return
-	error "failed to resolve kernel version: %s" "$1"
-	return 1
+	if ! kernel=$(kver "$k"); then
+		die "failed to resolve kernel version: %s" "$k"
+	fi
 }
 
 hook_list() {
@@ -260,7 +261,7 @@ while :; do
 		;;
 	-k|--kernel)
 		shift
-		KERNELVERSION=$1
+		kernel=$1
 		;;
 	-K|--kmod)
 		shift
@@ -364,22 +365,34 @@ fi
 [[ -e /proc/self/mountinfo ]] || die "/proc must be mounted!"
 [[ -e /dev/fd ]] || die "/dev must be mounted!"
 
-if [[ $KERNELVERSION != 'none' ]]; then
-	KERNELVERSION=$(resolve_kernver "$KERNELVERSION") || cleanup 1
-	_d_kmoduledir=$_optmoduleroot/lib/modules/$KERNELVERSION
+if resolve_kernel "$kernel"; then
+	_d_kmoduledir="$_optmoduleroot/lib/modules/$kernel"
+	if ! [[ -d $_d_kmoduledir ]]; then
+		die 'no such directory: %s' "$_d_kmoduledir"
+	fi
 
-	[[ -d $_d_kmoduledir ]] || \
-		die "no such directory: $_d_kmoduledir"
+	if ! [[ -f $_d_kmoduledir/modules.builtin ]]; then
+		warning 'missing modules.builtin'
+	else
+		add_builtin < "$_d_kmoduledir/modules.builtin"
+	fi
+
+	if ! [[ -f $_d_kmoduledir/modules.builtin.modinfo ]]; then
+		warning 'missing modules.builtin.modinfo'
+	else
+		add_builtin_modinfo < "$_d_kmoduledir/modules.builtin.modinfo"
+	fi
 fi
 
-_d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup 1
+
+_d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup
 BUILDROOT="$_d_workdir/root"
 BUILDARCHIVE="$_d_workdir/archive"
 
 _f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
 [[ -f "$_f_config" ]] || die "missing config file %s" "${_f_config:-in $_d_config}"
 
-source "$_f_config" || cleanup 1
+source "$_f_config" || cleanup
 
 if (( _optshowautomods )); then
 	run_build_hook 'autodetect' || cleanup
@@ -423,20 +436,7 @@ if (( ! _optstdout )); then
 	COMPRESSION=("$_optcompress")
 fi
 
-msg "$KERNELVERSION${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
-
-# prime the _addedmodules list with the builtins for this kernel
-if [[ -r $_d_kmoduledir/modules.builtin ]]; then
-	while IFS=/ read -a path; do
-		modname=${path[-1]%.ko}
-		_addedmodules["${modname//-/_}"]=2
-	done <"$_d_kmoduledir/modules.builtin"
-	unset modname path
-fi
-
-if [[ -r $_d_kmoduledir/modules.builtin.modinfo ]]; then
-	add_builtin_modinfo < "$_d_kmoduledir/modules.builtin.modinfo"
-fi
+msg "$kernel${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
 
 # set functrace and trap to catch errors in add_* functions
 declare -i _builderrors=0
@@ -455,7 +455,7 @@ done
 load_config
 
 add_module "${_optkmods[@]}"
-_add_module "${_add_modules[@]}" || cleanup 1
+_add_module "${_add_modules[@]}" || cleanup
 add_firmware "${_firmware[@]}"
 
 (( _builderrors )) && cleanup 1

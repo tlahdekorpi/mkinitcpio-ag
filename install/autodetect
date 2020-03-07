@@ -5,7 +5,7 @@
 build() {
 	local p fstype
 
-	[[ $KERNELVERSION == none ]] && return
+	[[ ! $kernel ]] && return
 
 	add_if_avail() {
 		# treat this as an alias, since ext3 might be aliased to ext4. also, as

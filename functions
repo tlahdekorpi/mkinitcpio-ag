@@ -205,7 +205,7 @@ funcgrep() {
 }
 
 modprobe() {
-	command modprobe -d "$_optmoduleroot" -S "$KERNELVERSION" "$@"
+	command modprobe -d "$_optmoduleroot" -S "$kernel" "$@"
 }
 
 add_autodetect() {
@@ -226,7 +226,7 @@ auto_modules() {
 				gsub(/-/, "_", $2)
 				printf "%s\0", $2
 			}
-		' {} + | xargs -0 modprobe -aqR -d "$_optmoduleroot" -S "$KERNELVERSION"
+		' {} + | xargs -0 modprobe -aqR -d "$_optmoduleroot" -S "$kernel"
 	)
 }
 
@@ -290,7 +290,7 @@ add_checked_modules() {
 add_firmware() {
 	local fw p
 
-	[[ $KERNELVERSION == none ]] && return
+	[[ ! $kernel ]] && return
 
 	for fw in "$@"; do
 		for p in "$_d_firmware"{/updates,}; do
@@ -299,6 +299,16 @@ add_firmware() {
 			continue 2
 		done
 		warning 'missing firmware: %s' "$fw"
+	done
+}
+
+add_builtin() {
+	local m
+	while read -r m; do
+		m="${m##*/}"
+		m="${m%.ko}"
+		m="${m//-/_}"
+		_addedmodules["$m"]=2
 	done
 }
 
@@ -320,6 +330,10 @@ add_builtin_modinfo() {
 			add_module "$module?"
 			done
 			;;
+		*.*)
+			module="${field%.*}"
+			_addedmodules["${module//-/_}"]=3
+			;;
 		esac
 	done
 }
@@ -327,7 +341,7 @@ add_builtin_modinfo() {
 _add_module() {
 	local m module softdeps deps field value
 
-	[[ $KERNELVERSION == none ]] && return 0
+	[[ ! $kernel ]] && return 0
 
 	_add_modules=()
 
@@ -361,7 +375,7 @@ _add_module() {
 			done
 			;;
 		esac
-	done < <(modinfo -b "$_optmoduleroot" -k "$KERNELVERSION" -0 "${@%\?}" 2>/dev/null)
+	done < <(modinfo -b "$_optmoduleroot" -k "$kernel" -0 "${@%\?}" 2>/dev/null)
 
 	for m in "${@//-/_}"; do
 		if [[ $m = *\? ]]; then
@@ -388,9 +402,9 @@ _add_module() {
 add_module() {
 	local target mod
 
-	[[ $KERNELVERSION == none ]] && return 0
+	[[ ! $kernel ]] && return 0
 
-	for target in "$@"; do
+	for target; do
 		target=${target%.ko*}
 		target=${target//-/_}
 
@@ -614,11 +628,11 @@ run_build_hook() {
 }
 
 install_modules() {
-	[[ $KERNELVERSION == none ]] && return 0
+	[[ ! $kernel ]] && return
 
-	if (( $# == 0 )); then
+	if (( ! $# )); then
 		warning "image does not include any kernel modules!"
-		return 0
+		return
 	fi
 
 	add 'mr - .*lib/modules/ usr/lib/modules/'
