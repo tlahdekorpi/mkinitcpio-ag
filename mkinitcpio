@@ -29,7 +29,8 @@ export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 unset GREP_OPTIONS CDPATH "${!LIBMOUNT_@}"
 
 # globals within mkinitcpio, intended to be used by hooks.
-declare -i systemd fs_autodetect_failed=1
+declare init
+declare -i fs_autodetect_failed=1
 declare -a fstypes
 
 # config
@@ -158,34 +159,37 @@ hook_list() {
 }
 
 compute_hookset() {
-	local -a hooks
 	local h
 
-	if (( $# )); then
-		hooks=("$@")
-	else
-		hooks=("${HOOKS[@]}" "${_optaddhooks[@]}")
+	if ! (( $# )); then
+		set -- "${HOOKS[@]}" "${_optaddhooks[@]}"
 	fi
 
-	(( ${#hooks[@]} )) || return 1
+	HOOKS=()
 
-	for h in "${hooks[@]}"; do
-		in_array "$h" "${_optskiphooks[@]}" && continue
+	for h; do
+		if in_array "$h" "${_optskiphooks[@]}"; then
+			continue
+		fi
 
 		case $h in
 		autodetect)
-			_hooks=($h "${_hooks[@]}")
+			_hooks=("$h" "${_hooks[@]}")
 			continue
 			;;
-		systemd)
-			systemd=1
+		init|systemd|systemd-git)
+			[[ $init ]] && die 'multiple inits: %s, %s' "$init" "$h"
+			init="$h"
+			;;
+		-)
+			return
 			;;
 		esac
 
 		_hooks+=("$h")
 	done
 
-	HOOKS=()
+	(( ${#_hooks[@]} ))
 }
 
 source "$_f_functions"

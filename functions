@@ -457,7 +457,7 @@ add_file_abs() {
 
 # add_runscript adds the runtime script for the calling hook to the image.
 add_runscript() {
-	(( systemd )) && return
+	[[ $init == systemd* ]] && return
 
 	local fn hookname=$1 script=$2
 	[[ ! -f "$script" ]] && return 1
@@ -521,10 +521,11 @@ load_config() {
 	fi
 
 	# /config is only used by the included init.
-	(( systemd )) && return
+	case $init in ''|systemd*) return ;; esac
 
 	add <<-?
 	c config - - - <<!
+	# mkinitcpio.init(5) config
 	  EARLYHOOKS='${_runhooks[early]# }'
 	       HOOKS='${_runhooks[hooks]# }'
 	   LATEHOOKS='${_runhooks[late]# }'
@@ -670,7 +671,7 @@ add_udev_rule() {
 }
 
 add_systemd_unit1() {
-	(( ! systemd )) && return
+	[[ $init != systemd* ]] && return
 
 	local -a units
 
@@ -690,7 +691,7 @@ add_systemd_unit() {
 	local -a units next reqs
 	local req
 
-	(( ! systemd )) && return
+	[[ $init != systemd* ]] && return
 	(( ! $# )) && return
 
 	addf 'gr /usr/lib/systemd/system/*.wants/%s - 0 0\n' "$@"
@@ -753,7 +754,7 @@ add_systemd_unit() {
 }
 
 add_systemd_drop_in() {
-	(( ! systemd )) && return
+	[[ $init != systemd* ]] && return
 
 	addf 'c usr/lib/systemd/system/%s.d/%s.conf - - - <<!\n' "$1" "$2"
 	add

@@ -2,9 +2,6 @@
 # $ cd github.com/systemd/systemd; ninja -C build
 # $ mkinitcpio -o systemd-git -X systemd=$PWD
 build() {
-	(( systemd )) && return 1
-	systemd=1
-
 	run_build_hook busybox
 	add "f $PWD/../systemd/{break,sysroot}-generator usr/lib/systemd/system-generators 0755"
 }
