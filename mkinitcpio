@@ -193,6 +193,26 @@ compute_hookset() {
 	(( ${#_hooks[@]} ))
 }
 
+source_config() {
+	local f
+
+	if [[ $1 == '-' ]]; then
+		return
+	fi
+
+	if ! [[ $1 ]]; then
+		for f in ${_d_config[@]/%//config}; do
+			if ! [[ -f $f ]]; then
+				continue
+			fi
+			source "$f"; return
+		done
+		warning 'missing config file'
+	else
+		source "$1"
+	fi
+}
+
 source "$_f_functions"
 
 trap 'cleanup 130' INT
@@ -384,15 +404,11 @@ if resolve_kernel "$kernel"; then
 	fi
 fi
 
+source_config "$_f_config" || exit
 
 _d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup
 BUILDROOT="$_d_workdir/root"
 BUILDARCHIVE="$_d_workdir/archive"
-
-_f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
-[[ -f "$_f_config" ]] || die "missing config file %s" "${_f_config:-in $_d_config}"
-
-source "$_f_config" || cleanup
 
 if (( _optshowautomods )); then
 	run_build_hook 'autodetect' || cleanup
@@ -436,7 +452,7 @@ if (( ! _optstdout )); then
 	COMPRESSION=("$_optcompress")
 fi
 
-msg "$kernel${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
+msg "${kernel:-no kernel}${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
 
 # rename everything from sbin to bin
 add 'mr - ^usr/sbin/ usr/bin/'
