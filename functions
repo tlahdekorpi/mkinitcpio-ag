@@ -341,7 +341,7 @@ add_builtin_modinfo() {
 _add_module() {
 	local m module softdeps deps field value
 
-	[[ ! $kernel ]] && return 0
+	[[ ! $kernel ]] && return
 
 	_add_modules=()
 
@@ -386,8 +386,7 @@ _add_module() {
 			continue
 		fi
 
-		error "module not found: %s" "$m"
-		return 1
+		warning "module not found: %s" "$m"
 	done
 
 	if (( ! ${#_add_modules[@]} )); then
