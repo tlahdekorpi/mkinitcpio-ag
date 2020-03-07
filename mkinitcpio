@@ -438,39 +438,36 @@ fi
 
 msg "$kernel${_optcompress:+, $_optcompress ${_comp_opts[*]}}${_optrootfs:+, sysroot:$_optrootfs}"
 
-# set functrace and trap to catch errors in add_* functions
-declare -i _builderrors=0
+# rename everything from sbin to bin
+add 'mr - ^usr/sbin/ usr/bin/'
+
+# catch errors in add_* functions
 set -o functrace
+declare -i _builderrors
 trap '(( $? )) && [[ $FUNCNAME = add_* ]] && (( ++_builderrors ))' RETURN
 
-add 'mr - ^usr/sbin/ usr/bin/'
 for hook in "${_hooks[@]}"; do
-	if run_build_hook "$hook"; then
-		continue
-	fi
-	(( _builderrors++ ))
-	case $hook in autodetect) break ;; esac
+	run_build_hook "$hook" || (( _builderrors++ ))
 done
-
-load_config
-
-add_module "${_optkmods[@]}"
-_add_module "${_add_modules[@]}" || cleanup
-add_firmware "${_firmware[@]}"
-
-(( _builderrors )) && cleanup 1
 
 trap -- RETURN
 set +o functrace
 
+(( ! _builderrors )) || cleanup
+
+load_config
+
+add_module "${_optkmods[@]}"
+_add_module "${_add_modules[@]}"
+
+add_firmware "${_firmware[@]}"
 install_modules "${!_modpaths[@]}"
 
 _ag_opts+=(-elf.{expand,fallback,once} -fmt cpio)
-
 [[ $_optrootfs ]] && _ag_opts+=(-rootfs "$_optrootfs")
 (( _optarchive )) && _ag_opts+=(-print)
 
-(( _optnogen )) && cleanup 0
+(( _optnogen )) && cleanup
 
 set -o pipefail
 
