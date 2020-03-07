@@ -509,9 +509,8 @@ load_config() {
 	add  '!'
 
 	for mod in "${MODULES[@]%\?}"; do
-		mod=${mod//-/_}
-		# only add real modules (2 == builtin)
-		(( _addedmodules["$mod"] == 1 )) && mods+=("$mod")
+		# 2 = builtin, 3 = alias
+		(( _addedmodules["${mod//-/_}"] == 1 )) && mods+=("$mod")
 	done
 
 	if (( ${#mods[*]} )); then
