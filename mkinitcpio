@@ -5,13 +5,12 @@ declare -r version=%VERSION%
 
 # globals within mkinitcpio, but not intended to be used by hooks.
 _f_functions=/usr/lib/mkinitcpio/functions
-_d_config=/etc/mkinitcpio:/usr/lib/mkinitcpio
+_d_config=(/{etc,usr/lib}/mkinitcpio)
 _d_firmware=/usr/lib/firmware
 
-declare _d_install
 declare _optrootfs _optmoduleroot _optgenimg _optcompress _opthookhelp
 declare -a _hooks _opthooks _optskiphooks _optaddhooks _firmware
-declare -a _ag_opts _comp_opts _add_modules _optkmods
+declare -a _ag_opts _comp_opts _add_modules _optkmods _d_install
 declare -A _runhooks _addedmodules _modpaths _autodetect_cache _built_hooks _addmodule
 declare -i _optshowautomods _optsavetree _optshowmods _optarchive
 declare -i _optforce _optquiet _optdebug _opthooklist _optnogen
@@ -19,7 +18,7 @@ declare -i _optstdout=1
 
 _devel=1
 if (( _devel )); then
-	_d_config="$PWD"; _f_functions="$(realpath $PWD/functions)"
+	_d_config=("$PWD"); _f_functions="$(realpath $PWD/functions)"
 fi
 
 export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
@@ -119,19 +118,18 @@ resolve_kernver() {
 }
 
 hook_list() {
-	local -a paths
-	if (( $# )); then
-		read -ra paths < <(find_script "$1")
+	if ! (( $# )); then
+		set -- "${_d_install[@]}"
 	else
-		IFS=: read -ra paths <<< "$_d_install"
+		set -- "$(find_script $1)"
 	fi
 
-	if ! (( ${#paths[@]} )); then
+	if ! [[ $* ]]; then
 		error 'no hooks'
 		return 1
 	fi
 
-	find "${paths[@]}" -type f -regextype posix-extended \
+	find "$@" -type f -regextype posix-extended \
 		-regex '.*/install/([[:alpha:]]+|.*/build)$' \
 		-exec awk '
 			!/^#/ {
@@ -324,8 +322,9 @@ while :; do
 	-p|--path)
 		shift
 		case $1 in
-		*+) _d_config="${1%%+}:$_d_config" ;;
-		*) _d_config="$1" ;;
+		*-) _d_config+=("${1%?}") ;;
+		*+) _d_config=("${1%?}" "${_d_config[@]}") ;;
+		*)  _d_config=("$1") ;;
 		esac
 		;;
 	-b|--base64)
@@ -343,7 +342,7 @@ while :; do
 	shift
 done
 
-_d_install=${_d_config//://install:}/install
+_d_install=("${_d_config[@]/%//install}")
 
 if [[ $_opthookhelp ]]; then
 	hook_list "$_opthookhelp"
@@ -378,17 +377,16 @@ _f_config="${_f_config:-$(PATH=$_d_config type -P config)}"
 
 source "$_f_config" || cleanup 1
 
+if (( _optshowautomods )); then
+	run_build_hook 'autodetect' || cleanup
+	printf '%s\n' "${!_autodetect_cache[@]}" | sort
+	cleanup
+fi
+
 # after returning, hooks are populated into the array '_hooks'
 # HOOKS should not be referenced from here on
 if ! compute_hookset "${_opthooks[@]}"; then
 	die 'no hooks'
-fi
-
-if (( _optshowautomods )); then
-	PATH=$_d_install source 'autodetect'
-	build
-	printf '%s\n' "${!_autodetect_cache[@]}" | sort
-	cleanup 0
 fi
 
 # do not overwrite existing files without force
