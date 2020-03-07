@@ -23,7 +23,6 @@ if (( _devel )); then
 fi
 
 export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-export RPATH="$PATH"
 
 # GREP_OPTIONS="--color=always" will break everything
 # CDPATH can affect cd and pushd
@@ -241,7 +240,6 @@ while :; do
 		_optrootfs="$1"
 		[[ -d "$_optrootfs" ]] || \
 			die 'no such directory: %s' "$_optrootfs"
-		RPATH=$_optrootfs${PATH//:/:$_optrootfs}
 		;;
 	-o|--hooks)
 		shift

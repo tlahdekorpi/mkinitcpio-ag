@@ -477,11 +477,11 @@ add_full_dir() {
 }
 
 add_file() {
-	add "fr $*"
+	(( ! $# )) || add "fr $*"
 }
 
 add_file_abs() {
-	add "f $*"
+	(( ! $# )) || add "f $*"
 }
 
 # add_runscript adds the runtime script for the calling hook to the image.
@@ -511,21 +511,9 @@ add_runscript() {
 	done < <(funcgrep '^run_[[:alnum:]_]+' "$script")
 }
 
-# add_binary includes binary $1 and it's dependencies to the image.
+# add_binary looks up binaries $@ from PATH and adds them to the image.
 add_binary() {
-	local src=${1:?}
-
-	if [[ ${1:0:1} != '/' ]]; then
-		if ! src=$(PATH=$RPATH type -P "$1"); then
-			error 'failed to add binary: %s' "$1"
-			return 1
-		fi
-		src="${src##$_optrootfs}"
-	else
-		src=$1
-	fi
-
-	add "L $src"
+	(( ! $# )) || addf 'p %s usr/bin/\n' "$@"
 }
 
 # load_config adds all modules, binaries, files and the config into the image,
