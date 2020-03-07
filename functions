@@ -170,14 +170,6 @@ msgq() {
 	printf "$1\n" "${@:2}" >&2
 }
 
-msg2() {
-	(( ! _optquiet )) || printf "  $1\n" "${@:2}" >&2
-}
-
-msg3() {
-	(( ! _optquiet )) || printf "    $1\n" "${@:2}" >&2
-}
-
 warning() {
 	printf "warning: $1\n" "${@:2}" >&2
 }
@@ -192,15 +184,6 @@ die() {
 	cleanup 1
 }
 
-# map runs a function $1 for ${@:2}
-map() {
-	local r=0
-	for _ in "${@:2}"; do
-		"$1" "$_" || (( $# > 255 ? r=1 : ++r ))
-	done
-	return $r
-}
-
 # in_array searches ${@:2} for $1, returns true if found.
 in_array() {
 	local needle=$1; shift
@@ -209,22 +192,6 @@ in_array() {
 	for item in "$@"; do
 		[[ $item = $needle ]] && return 0
 	done
-	return 1
-}
-
-# index_of gets the array ${@:2} index of item $1 and sets the
-# global var _idx with the index, returns true if found.
-index_of() {
-	local item=$1; shift
-
-	for (( _idx=1; _idx <= $#; _idx++ )); do
-		if [[ $item = ${!_idx} ]]; then
-			(( --_idx ))
-			return 0
-		fi
-	done
-
-	unset _idx
 	return 1
 }
 
