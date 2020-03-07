@@ -480,6 +480,10 @@ add_file() {
 	(( ! $# )) || add "fr $*"
 }
 
+add_files() {
+	(( ! $# )) || addf 'fr %s\n' "$@"
+}
+
 add_file_abs() {
 	(( ! $# )) || add "f $*"
 }
@@ -522,9 +526,9 @@ load_config() {
 	local mod
 	local -a mods
 
-	map add_module "${MODULES[@]}"
-	map add_binary "${BINARIES[@]}"
-	map add_file "${FILES[@]}"
+	add_module "${MODULES[@]}"
+	add_binary "${BINARIES[@]}"
+	add_files "${FILES[@]}"
 
 	add <<-?
 	c version - - - <<!
