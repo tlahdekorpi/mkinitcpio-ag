@@ -490,10 +490,10 @@ set -o pipefail
 if (( _optstdout )); then
 	archivegen "${_ag_opts[@]}" "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@"
 else
-	tmp="$(mktemp "$_optgenimg".mkinitcpio.XXXXXX)"
+	tmp="$(mktemp "$_optgenimg".mkinitcpio.XXXXXX)" || cleanup
 	archivegen "${_ag_opts[@]}" "${ARCHIVEGEN_OPTIONS[@]}" "$BUILDARCHIVE" "$@" \
 		| "$_optcompress" "${_comp_opts[@]}" > "$tmp"
-	(( ! $? )) || error "image generation failed"
+	(( ! $? )) || die "image generation failed: %s" "$tmp"
 	mv "$tmp" "$_optgenimg"
 fi
 
