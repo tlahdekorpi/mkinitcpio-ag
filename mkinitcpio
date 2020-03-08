@@ -194,21 +194,24 @@ compute_hookset() {
 }
 
 source_config() {
-	local f
+	local i
 
 	if [[ $1 == '-' ]]; then
 		return
 	fi
 
 	if ! [[ $1 ]]; then
-		for f in ${_d_config[@]/%//config}; do
-			if ! [[ -f $f ]]; then
+		set -- "${_d_config[@]/%//config}"
+		for ((i=$#; i>0; i--)); do
+			if ! [[ -r ${!i} ]]; then
+				debug 'skip: %s' "${!i}"
 				continue
 			fi
-			source "$f"; return
+			debug 'load: %s' "${!i}"
+			source "${!i}" || return
 		done
-		warning 'missing config file'
 	else
+		debug 'load: %s' "$1"
 		source "$1"
 	fi
 }
@@ -349,7 +352,7 @@ while :; do
 		case $1 in
 		*-) _d_config+=("${1%?}") ;;
 		*+) _d_config=("${1%?}" "${_d_config[@]}") ;;
-		*)  _d_config=("$1") ;;
+		*)  IFS=, read -r -a _d_config <<< "$1" ;;
 		esac
 		;;
 	-b|--base64)
@@ -404,7 +407,7 @@ if resolve_kernel "$kernel"; then
 	fi
 fi
 
-source_config "$_f_config" || exit
+source_config "$_f_config" || die 'config'
 
 _d_workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX) || cleanup
 BUILDROOT="$_d_workdir/root"

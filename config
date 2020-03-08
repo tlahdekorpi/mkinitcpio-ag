@@ -16,13 +16,13 @@ HOOKS=(
 ## COMPRESSION
 # List of compressors in order of preference.
 # Use 'cat' to create an uncompressed image.
-COMPRESSION=(
-	pigz
-	gzip
-	# xz
-	# lz4
-	# cat
-)
+# COMPRESSION=(
+# 	pigz
+# 	gzip
+# 	xz
+# 	lz4
+# 	cat
+# )
 
 ## MODULES
 # List of modules to load at early boot.
