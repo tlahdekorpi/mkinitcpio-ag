@@ -123,12 +123,11 @@ hook_list() {
 	if ! (( $# )); then
 		set -- "${_d_install[@]}"
 	else
-		set -- "$(find_script $1)"
-	fi
+		if ! cd_script_dir "$1"; then
+			die 'no such hook: %s' "$1"
+		fi
 
-	if ! [[ $* ]]; then
-		error 'no hooks'
-		return 1
+		set -- "$PWD/$1"
 	fi
 
 	find "$@" -type f -regextype posix-extended \

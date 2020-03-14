@@ -546,54 +546,58 @@ load_config() {
 	?
 }
 
-find_script() {
+cd_script_dir() {
+	local path script=${1:?}
+
 	for path in "${_d_install[@]}"; do
-		[[ ! -e "$path/$1" ]] && continue
-		printf '%s\n' "$path/$1"
-		return 0
+		if [[ -e "$path/$script" ]]; then
+			cd "$path"
+			return 0
+		fi
 	done
 	return 1
 }
 
 run_build_hook() {
-	local hook=$1 script head OPWD
-	local -a scripts
+	local hook="$1"
+	local head pwd
+	local -i i
+
+	if (( $# > 1 )); then
+		error 'run_build_hook: too many arguments'
+		return 1
+	fi
 
 	(( _built_hooks["$hook"] )) && return 0
 	_built_hooks["$hook"]=1
 
-	if ! script=$(find_script $hook); then
+	pwd="$PWD"
+	if ! cd_script_dir "$hook"; then
 		error 'no such hook: %s' "$hook"
 		return 1
 	fi
 
-	OPWD="$PWD"
-
 	# hooks can be directories containing a build hook, runscript
 	# and .archive files which are automatically added to the image.
-	if [[ ! -d "$script" ]]; then
-		scripts=("$script")
-		cd "$(dirname "$script")"
-	else
-		scripts=("$script"/{?(build),*.archive,runscript})
-		cd "$script"
+	if [[ -d "$hook" ]]; then
+		cd "$hook"
+		set -- build runscript *.archive
 	fi
 
-	for x in "${scripts[@]}"; do
-		[[ -f "$x" ]] || continue
-
-		if [[ -d "$script" ]]; then
-			msg "%s/%s" "$hook" "${x##*/}"
-		else
-			msg "%s" "$hook"
+	for x; do
+		if [[ ! -f "$x" ]]; then
+			continue
 		fi
+
+		(( i++ ))
+		msg "%s" "${2:+$hook/}$x"
 
 		case "$x" in
 		*.archive)
 			add < "$x"
 			continue
 			;;
-		*/runscript)
+		runscript)
 			add_runscript "$hook" "$x"
 			continue
 			;;
@@ -606,23 +610,28 @@ run_build_hook() {
 		fi
 
 		unset -f build
-		if ! source "$x"; then
-			return 1
+		if ! source ./"$x"; then
+			cd "$pwd"; return 1
 		fi
 
 		if ! declare -f build >/dev/null; then
 			error 'build function missing: %s' "$hook"
-			return 1
+			cd "$pwd"; return 1
 		fi
 
 		if ! build; then
 			error 'build function failed: %s' "$hook"
-			cd "$OPWD"
-			return 1
+			cd "$pwd"; return 1
 		fi
 	done
 
-	cd "$OPWD"
+	cd "$pwd"
+
+	if (( ! i )); then
+		warning 'empty hook directory: %s' "$hook"
+		return 0
+	fi
+
 	HOOKS+=("$hook")
 }
 
