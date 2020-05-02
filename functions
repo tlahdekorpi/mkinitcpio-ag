@@ -472,10 +472,10 @@ add_file_abs() {
 add_runscript() {
 	[[ $init == systemd* ]] && return
 
-	local fn hookname=$1 script=$2
-	[[ ! -f "$script" ]] && return 1
+	local hookname="$1"
+	local fn
 
-	add "f $script /hooks/$hookname 0755"
+	add "f $PWD/runscript /hooks/$hookname 0755"
 
 	while read -r fn; do
 		case $fn in
@@ -492,7 +492,7 @@ add_runscript() {
 			_runhooks['cleanup']="$hookname ${_runhooks['cleanup']}"
 			;;
 		esac
-	done < <(funcgrep '^run_[[:alnum:]_]+' "$script")
+	done < <(funcgrep '^run_[[:alnum:]_]+' 'runscript')
 }
 
 # add_binary looks up binaries $@ from PATH and adds them to the image.
@@ -598,7 +598,7 @@ run_build_hook() {
 			continue
 			;;
 		runscript)
-			add_runscript "$hook" "$x"
+			add_runscript "$hook"
 			continue
 			;;
 		esac
