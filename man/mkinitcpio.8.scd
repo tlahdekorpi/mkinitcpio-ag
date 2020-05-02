@@ -57,6 +57,9 @@ initramfs images that allows for easy extension with hooks.
 *-M, --automods*
 	Show modules found with "autodetect" hook.
 
+*-n, --concurrent*
+	Load ELFs concurrently.
+
 *-N, --nogen*
 	Do not generate the final archive.
 

@@ -8,13 +8,14 @@ _ls() {
 _mkinitcpio() {
 	local opt_short opt_long cur prev
 
-	opt_short=(A a M b z c d F f h H o k K L r N p R s S v V g X)
+	opt_short=(A a M b z n c d F f h H o k K L r N p R s S v V g X)
 	opt_long=(
 		add addhooks
 		archive
 		automods
 		base64
 		compress
+		concurrent
 		config
 		debug
 		firmware

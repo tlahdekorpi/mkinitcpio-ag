@@ -34,5 +34,6 @@ _arguments \
 {-K,--kmod}'[Append kernel modules]' \
 {-F,--firmware}'[Use path as firmware search path]' \
 {-b,--base64}'[Pass -b64 to archivegen]' \
+{-n,--concurrent}'[Load ELFs concurrently]' \
 '-X[Variable used by archivegen]' \
 '*:files:_files'
