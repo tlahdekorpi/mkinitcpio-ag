@@ -1,6 +1,7 @@
 ?fr /etc/lvm/lvm.conf
 
-L /usr/sbin/{pdata_tools,lvm} usr/bin
+L /usr/sbin/lvm
+?L /usr/sbin/{lvmetad,pdata_tools}
 
 l pdata_tools usr/bin/{
 	cache_check
