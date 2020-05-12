@@ -264,7 +264,7 @@ while :; do
 		;;
 	-R|--rootfs)
 		shift
-		_optrootfs="$1"
+		_optrootfs="$(realpath "$1")"
 		[[ -d "$_optrootfs" ]] || \
 			die 'no such directory: %s' "$_optrootfs"
 		;;
@@ -328,7 +328,7 @@ while :; do
 		;;
 	-F|--firmware)
 		shift
-		_d_firmware="$1"
+		_d_firmware="$(realpath "$1")"
 		;;
 	-H|--hookhelp)
 		shift
@@ -346,7 +346,7 @@ while :; do
 		;;
 	-r|--moduleroot)
 		shift
-		_optmoduleroot=$1
+		_optmoduleroot="$(realpath "$1")"
 		;;
 	-p|--path)
 		shift
