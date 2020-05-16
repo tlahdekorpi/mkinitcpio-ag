@@ -2,8 +2,6 @@
 # busybox(1).
 L /usr/(lib/initcpio|sbin|bin)/busybox usr/bin/busybox
 l busybox usr/bin/{
-	[
-	[[
 	ash
 	awk
 	bzip2
@@ -65,7 +63,6 @@ l busybox usr/bin/{
 	sysctl
 	tail
 	tee
-	time
 	top
 	touch
 	tr
