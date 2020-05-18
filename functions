@@ -672,7 +672,7 @@ add_udev_rule() {
 	/^#|^$/ {next}
 	{
 	for (i=1; i<=NF; i++)
-		if ($i ~ "RUN({program}|+)|IMPORT{program}|ENV{REMOVE_CMD}") {
+		if ($i ~ "RUN({program}|+)|IMPORT{program}|ENV{REMOVE_CMD}|PROGRAM=") {
 			split($i, s, "\"")
 			sub(/ .*/, "", s[2])
 			if (s[2] !~ /^\$|^$/)
