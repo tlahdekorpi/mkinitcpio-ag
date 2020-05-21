@@ -106,4 +106,5 @@ g $build/units/*.service -
 mr - .*rules.d/ usr/lib/udev/rules.d/
 g {$rules,$build/rules.d}/*.rules -
 
-mc
+# clear declared masks
+mc -5
