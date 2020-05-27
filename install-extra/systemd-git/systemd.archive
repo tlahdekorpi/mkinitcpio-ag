@@ -98,13 +98,13 @@ ExecStart=/usr/lib/systemd/systemd-udevd --resolve-names=never
 
 l initrd.target usr/lib/systemd/system/default.target
 
-g $units/*.{target,socket,service} -
+r $units/.(target|socket|service)$ -
 
 mr - units system
-g $build/units/*.service -
+r $build/units/.service$ -
 
 mr - .*rules.d/ usr/lib/udev/rules.d/
-g {$rules,$build/rules.d}/*.rules -
+r $systemd/^(build|rules.d)$/.rules$ -
 
 # clear declared masks
 mc -5

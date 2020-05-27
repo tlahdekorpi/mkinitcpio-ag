@@ -16,9 +16,7 @@ build() {
 	!
 
 	(( fs_autodetect_failed )) && add <<-!
-	gL /usr/sbin/fsck.*
-	?L /usr/sbin/xfs_repair
-	?L /usr/(s|)bin/btrfs
+	rL /usr/(s|)bin/^(btrfs|xfs_repair|fsck..*)$
 	!
 
 	for f in "${fstypes[@]}"; do

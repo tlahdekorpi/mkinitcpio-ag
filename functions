@@ -644,7 +644,7 @@ install_modules() {
 	fi
 
 	add 'mr - .*lib/modules/ usr/lib/modules/'
-	add "g $_d_kmoduledir/modules{*.bin,.devname,.softdep} - 0 0"
+	add "r $_d_kmoduledir/^modules.(.*.bin|devname|softdep)$ - 0 0"
 	addf 'f %s\n' "$@"
 	add 'mc -'
 }
@@ -715,7 +715,7 @@ add_systemd_unit() {
 	[[ $init != systemd* ]] && return
 	(( ! $# )) && return
 
-	addf 'gr /usr/lib/systemd/system/*.wants/%s - 0 0\n' "$@"
+	addf 'rr /usr/lib/systemd/system/.wants$/%s - 0 0\n' "$@"
 	addf 'fr /usr/lib/systemd/system/%s\n' "$@"
 
 	units=("${@/#/$_optrootfs/usr/lib/systemd/system/}")
@@ -768,7 +768,8 @@ add_systemd_unit() {
 	for req in "${reqs[@]}"; do
 		[[ -L "$req" ]] || continue
 		next+=("${req##*/}")
-		addf 'gr %s - 0 0\n' "${req##$_optrootfs}"
+		# TODO: remove glob abuse
+		addf 'rr %s - 0 0\n' "${req##$_optrootfs}"
 	done
 
 	add_systemd_unit "${next[@]}"
