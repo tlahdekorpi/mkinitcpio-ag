@@ -715,7 +715,9 @@ add_systemd_unit() {
 	[[ $init != systemd* ]] && return
 	(( ! $# )) && return
 
-	addf 'rr /usr/lib/systemd/system/.wants$/%s - 0 0\n' "$@"
+	addf 'rr /usr/lib/systemd/system/.wants$/^('
+	addf '%s' "${@/#/|}"
+	add ')$ - 0 0'
 	addf 'fr /usr/lib/systemd/system/%s\n' "$@"
 
 	units=("${@/#/$_optrootfs/usr/lib/systemd/system/}")
