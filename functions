@@ -770,8 +770,7 @@ add_systemd_unit() {
 	for req in "${reqs[@]}"; do
 		[[ -L "$req" ]] || continue
 		next+=("${req##*/}")
-		# TODO: remove glob abuse
-		addf 'rr %s - 0 0\n' "${req##$_optrootfs}"
+		addf 'ar %s - - 0 0\n' "${req##$_optrootfs}"
 	done
 
 	add_systemd_unit "${next[@]}"
