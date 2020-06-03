@@ -1,0 +1,6 @@
+HOOKS+=(
+	systemd-git
+)
+ARCHIVEGEN_OPTIONS+=(
+	-X systemd=$HOME/x/github.com/systemd/systemd
+)
