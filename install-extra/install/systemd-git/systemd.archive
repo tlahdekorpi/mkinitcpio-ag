@@ -1,11 +1,6 @@
 $ systemd /home/user/x/github.com/systemd/systemd
-$ build $systemd/build
-$ units $systemd/units
-$ rules $systemd/rules.d
 
-$ name systemd
-
-c etc/hostname - - - $name
+c etc/hostname - - - systemd
 c etc/initrd-release
 
 l usr/{sbin,bin,lib} /
@@ -28,9 +23,6 @@ c etc/passwd - - - root:x:0:0:root:/:/bin/sh
 c etc/group  - - - root:x:0:root
 c etc/shadow - - - root::::::::
 
-mr - $build usr/lib/systemd
-mr - $units usr/lib/systemd/system
-
 # run directly from /init the rpath $ORIGIN is not used for looking up libraries (bug?)
 # however executing systemd indirectly using ld.so works
 c init 0755 - - <<!
@@ -38,7 +30,10 @@ c init 0755 - - <<!
 exec /lib64/ld-linux-x86-64.so.2 /usr/lib/systemd/systemd
 !
 
+$ build $systemd/build
+
 mm - . - 0 0
+mr - $build usr/lib/systemd
 
 LA $build/src/udev/{scsi,ata}_id usr/lib/udev
 LA $build/systemd-{
@@ -64,6 +59,8 @@ LA $build/{
 	systemd-vconsole-setup
 	systemd-hwdb
 }
+
+mc -
 
 l ../lib/systemd/{
 	udevadm
@@ -98,13 +95,7 @@ ExecStart=/usr/lib/systemd/systemd-udevd --resolve-names=never
 
 l initrd.target usr/lib/systemd/system/default.target
 
-r $units/.(target|socket|service)$ -
+r $systemd\{/build,}/rules.d/.rules$ usr/lib/udev/rules.d
+r $systemd\{/build,}/units/.(target|socket|service)$ usr/lib/systemd/system
 
-mr - units system
-r $build/units/.service$ -
-
-mr - .*rules.d/ usr/lib/udev/rules.d/
-r $systemd/^(build|rules.d)$/.rules$ -
-
-# clear declared masks
-mc -5
+mc -

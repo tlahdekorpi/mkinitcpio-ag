@@ -3,5 +3,5 @@
 # $ mkinitcpio -o systemd-git -X systemd=$PWD
 build() {
 	run_build_hook busybox
-	add "f $PWD/../systemd/{break,sysroot}-generator usr/lib/systemd/system-generators 0755"
+	add "f $PWD/../../../install/systemd/{break,sysroot}-generator usr/lib/systemd/system-generators 0755"
 }
