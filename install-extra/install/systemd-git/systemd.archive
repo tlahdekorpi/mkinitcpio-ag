@@ -54,13 +54,14 @@ LA $build/{
 	systemd-sulogin-shell
 	systemd-sysctl
 	systemd-tmpfiles
-	systemd-udevd
 	systemd-volatile-root
 	systemd-vconsole-setup
 	systemd-hwdb
 }
 
 mc -
+
+l udevadm usr/lib/systemd/systemd-udevd
 
 l ../lib/systemd/{
 	udevadm
@@ -95,7 +96,14 @@ ExecStart=/usr/lib/systemd/systemd-udevd --resolve-names=never
 
 l initrd.target usr/lib/systemd/system/default.target
 
-r $systemd\{/build,}/rules.d/.rules$ usr/lib/udev/rules.d
-r $systemd\{/build,}/units/.(target|socket|service)$ usr/lib/systemd/system
+r $systemd/\{
+	rules.d
+	src/login
+	build/rules.d
+	build/src/login
+	build/src/vconsole
+}/\.rules$ usr/lib/udev/rules.d
+
+r $systemd\{/build,}/units/\.(target|socket|service)$ usr/lib/systemd/system
 
 mc -
