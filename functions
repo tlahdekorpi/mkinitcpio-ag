@@ -136,13 +136,23 @@ parseopts() {
 	return 0
 }
 
-kver() {
-	# this is intentionally very loose. only ensure that we're
-	# dealing with some sort of string that starts with something
-	# resembling dotted decimal notation. remember that there's no
-	# requirement for CONFIG_LOCALVERSION to be set.
-	local kver re='^[[:digit:]]+(\.[[:digit:]]+)+'
+# this is intentionally very loose. only ensure that we're
+# dealing with some sort of string that starts with something
+# resembling dotted decimal notation. remember that there's no
+# requirement for CONFIG_LOCALVERSION to be set.
+readonly kver_re='^[[:digit:]]+(\.[[:digit:]]+)+'
 
+kver_grep() {
+	local kv
+	kv="$(grep -m1 -aoE 'Linux version .(\.[-[:alnum:]]+)+' "$1")"
+	kv="${kv:14}" # 'Linux version '
+
+	[[ $kv =~ $kver_re ]] || return 1
+	printf '%s' "$kv"
+}
+
+kver_dd() {
+	local kv
 	# scrape the version out of the kernel image. locate the offset
 	# to the version string by reading 2 bytes out of image at at
 	# address 0x20E. this leads us to a string of, at most, 128 bytes.
@@ -150,13 +160,15 @@ kver() {
 	local offset=$(hexdump -s 526 -n 2 -e '"%0d"' "$1")
 	[[ $offset = +([0-9]) ]] || return 1
 
-	read kver _ < \
-		<(dd if="$1" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+	read kv _ < <(
+		dd if="$1" bs=1 count=127 skip=$((offset+0x200)) 2>/dev/null
+	)
 
-	[[ $kver =~ $re ]] || return 1
-
-	printf '%s' "$kver"
+	[[ $kv =~ $kver_re ]] || return 1
+	printf '%s' "$kv"
 }
+
+kver() { kver_dd "$1" || kver_grep "$1"; }
 
 debug() {
 	(( ! _optdebug )) || printf "debug: $1\n" "${@:2}" >&2
