@@ -153,16 +153,14 @@ kver_grep() {
 
 kver_dd() {
 	local kv
+	local -i off
 	# scrape the version out of the kernel image. locate the offset
 	# to the version string by reading 2 bytes out of image at at
 	# address 0x20E. this leads us to a string of, at most, 128 bytes.
 	# read the first word from this string as the kernel version.
-	local offset=$(hexdump -s 526 -n 2 -e '"%0d"' "$1")
-	[[ $offset = +([0-9]) ]] || return 1
-
-	read kv _ < <(
-		dd if="$1" bs=1 count=127 skip=$((offset+0x200)) 2>/dev/null
-	)
+	off=$(od -An -j0x20E -dN2 "$1") || return 1
+	((off += 0x200))
+	read kv _ < <(dd if="$1" bs=1 count=127 skip=$off status=none)
 
 	[[ $kv =~ $kver_re ]] || return 1
 	printf '%s' "$kv"
