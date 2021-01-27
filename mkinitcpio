@@ -106,17 +106,13 @@ resolve_kernel() {
 		return 0
 	fi
 
-	if [[ ${k:0:1} != / ]]; then
+	if [[ ${k:0:1} != / ]] && [[ ! -e $k ]]; then
 		kernel="$k"
 		return 0
 	fi
 
-	if [[ ! -e $k ]]; then
-		die "no such file: %s" "$k"
-	fi
-
 	if ! kernel=$(kver "$k"); then
-		die "failed to resolve kernel version: %s" "$k"
+		die "failed to resolve kernel version from: %s" "$k"
 	fi
 }
 
