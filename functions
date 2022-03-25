@@ -513,9 +513,6 @@ add_binary() {
 # load_config adds all modules, binaries, files and the config into the image,
 # and embeds version information for archivegen and mkinitcpio.
 load_config() {
-	local mod
-	local -a mods
-
 	add_module "${MODULES[@]}"
 	add_binary "${BINARIES[@]}"
 	add_files "${FILES[@]}"
@@ -531,17 +528,6 @@ load_config() {
 	declare -p HOOKS COMPRESSION MODULES BINARIES FILES | add
 	add  '!'
 
-	for mod in "${MODULES[@]%\?}"; do
-		# 2 = builtin, 3 = alias
-		(( _addedmodules["${mod//-/_}"] == 1 )) && mods+=("$mod")
-	done
-
-	if (( ${#mods[*]} )); then
-		add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
-		addf '%s\n' "${mods[@]}"
-		add  '!'
-	fi
-
 	# /config is only used by the included init.
 	case $init in ''|systemd*) return ;; esac
 
@@ -554,6 +540,22 @@ load_config() {
 	CLEANUPHOOKS='${_runhooks[cleanup]% }'
 	!
 	?
+}
+
+load_config_modules() {
+	local mod
+	local -a mods
+
+	for mod in "${MODULES[@]%\?}"; do
+		# 2 = builtin, 3 = alias
+		(( _addedmodules["${mod//-/_}"] == 1 )) && mods+=("$mod")
+	done
+
+	if (( ${#mods[*]} )); then
+		add  'c usr/lib/modules-load.d/mkinitcpio.conf - - - <<!'
+		addf '%s\n' "${mods[@]}"
+		add  '!'
+	fi
 }
 
 cd_script_dir() {

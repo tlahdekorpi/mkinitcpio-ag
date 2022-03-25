@@ -478,6 +478,7 @@ load_config
 
 add_module "${_optkmods[@]}"
 _add_module "${_add_modules[@]}"
+load_config_modules
 
 add_firmware "${_firmware[@]}"
 install_modules "${!_modpaths[@]}"
