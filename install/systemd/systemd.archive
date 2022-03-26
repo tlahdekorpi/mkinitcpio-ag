@@ -13,6 +13,9 @@ c etc/initrd-release
 # fsck
 l ../proc/self/mounts etc/mtab
 
+# var-run-bad
+l ../run var/run
+
 L /usr/sbin/{
 	blkid
 	sulogin
