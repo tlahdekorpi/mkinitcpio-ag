@@ -298,15 +298,17 @@ add_checked_modules() {
 
 # add_firmware adds all firmware $@ found in _d_firmware to the image.
 add_firmware() {
-	local fw p
+	local fw p x
 
 	[[ ! $kernel ]] && return
 
-	for fw in "$@"; do
+	for fw; do
 		for p in "$_d_firmware"{/updates,}; do
-			[[ -f "$p/$fw" ]] || continue
-			add "f $p/$fw usr/lib/firmware/$fw"
-			continue 2
+			for x in "$fw"{,.xz,.zst}; do
+				[[ -f "$p/$x" ]] || continue
+				add "f $p/$x usr/lib/firmware/$x"
+				continue 3
+			done
 		done
 		warning 'missing firmware: %s' "$fw"
 	done
